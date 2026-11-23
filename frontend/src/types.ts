@@ -38,6 +38,8 @@ export interface Job {
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  salaryRange: string | null;
+  location: string | null;
 }
 
 export type JobSortField =
@@ -57,5 +59,25 @@ export interface JobSort {
 
 /** Fields the UI can edit. null clears the value. */
 export type JobUpdate = Partial<
-  Pick<Job, "status" | "notes" | "contactName" | "contactEmail" | "contactPhone">
+  Pick<Job, "status" | "notes" | "contactName" | "contactEmail" | "contactPhone" | "salaryRange" | "location">
 >;
+
+export type PluginRunStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
+
+export interface PluginRun {
+  name: string;
+  status: PluginRunStatus;
+  startedAt: string | null;
+  finishedAt: string | null;
+  jobsFound: number;
+  jobsAdded: number;
+  error: string | null;
+}
+
+export interface Scan {
+  id: string;
+  startedAt: string;
+  finishedAt: string | null;
+  running: boolean;
+  plugins: PluginRun[];
+}

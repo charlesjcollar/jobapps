@@ -35,10 +35,12 @@ type Job struct {
 	ContactName   *string
 	ContactEmail  *string
 	ContactPhone  *string
+	SalaryRange   *string
+	Location      *string
 }
 
 const jobColumns = `id, company_name, job_title, posting_id, link, posted_date, retrieved_date, status, last_updated, notes,
-	contact_name, contact_email, contact_phone`
+	contact_name, contact_email, contact_phone, salary_range, location`
 
 type scanner interface{ Scan(dest ...any) error }
 
@@ -46,7 +48,7 @@ func scanJob(row scanner) (Job, error) {
 	var j Job
 	err := row.Scan(&j.ID, &j.CompanyName, &j.JobTitle, &j.PostingID, &j.Link,
 		&j.PostedDate, &j.RetrievedDate, &j.Status, &j.LastUpdated, &j.Notes,
-		&j.ContactName, &j.ContactEmail, &j.ContactPhone)
+		&j.ContactName, &j.ContactEmail, &j.ContactPhone, &j.SalaryRange, &j.Location)
 	return j, err
 }
 
@@ -193,6 +195,8 @@ type Update struct {
 	ContactName  *Nullable
 	ContactEmail *Nullable
 	ContactPhone *Nullable
+	SalaryRange  *Nullable
+	Location     *Nullable
 }
 
 // Nullable is a value for a nullable text column. Value nil writes NULL.
@@ -234,6 +238,8 @@ func (s *Store) UpdateJob(ctx context.Context, id int64, u Update) (*Job, error)
 		{"contact_name", u.ContactName},
 		{"contact_email", u.ContactEmail},
 		{"contact_phone", u.ContactPhone},
+		{"salary_range", u.SalaryRange},
+		{"location", u.Location},
 	} {
 		if c.v != nil {
 			set(c.col, c.v.Value)
@@ -265,6 +271,8 @@ type NewJob struct {
 	PostingID   string
 	Link        string
 	PostedDate  *time.Time
+	SalaryRange *string // optional
+	Location    *string // optional
 }
 
 // InsertNew saves the jobs whose (company_name, posting_id) isn't already stored,
@@ -277,8 +285,8 @@ func (s *Store) InsertNew(ctx context.Context, jobs []NewJob) ([]Job, error) {
 	defer tx.Rollback()
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO jobs (company_name, job_title, posting_id, link, posted_date)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO jobs (company_name, job_title, posting_id, link, posted_date, salary_range, location)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (company_name, posting_id) DO NOTHING
 		RETURNING `+jobColumns)
 	if err != nil {
@@ -288,7 +296,8 @@ func (s *Store) InsertNew(ctx context.Context, jobs []NewJob) ([]Job, error) {
 
 	inserted := []Job{}
 	for _, n := range jobs {
-		j, err := scanJob(stmt.QueryRowContext(ctx, n.CompanyName, n.JobTitle, n.PostingID, n.Link, formatDate(n.PostedDate)))
+		j, err := scanJob(stmt.QueryRowContext(ctx, n.CompanyName, n.JobTitle, n.PostingID, n.Link, formatDate(n.PostedDate),
+			blankToNil(n.SalaryRange), blankToNil(n.Location)))
 		if errors.Is(err, sql.ErrNoRows) {
 			continue // already saved, or repeated earlier in this batch
 		}
@@ -307,6 +316,14 @@ func formatDate(t *time.Time) *string {
 	}
 	s := t.Format(dateLayout)
 	return &s
+}
+
+func blankToNil(s *string) *string {
+	if s == nil || strings.TrimSpace(*s) == "" {
+		return nil
+	}
+	v := strings.TrimSpace(*s)
+	return &v
 }
 
 func isUniqueViolation(err error) bool {

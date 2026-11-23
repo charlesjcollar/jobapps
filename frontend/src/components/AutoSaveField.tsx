@@ -59,7 +59,7 @@ export default function AutoSaveField({ value, onSave, multiline, type = "text",
   };
 
   return multiline ? (
-    <textarea {...common} rows={2} onChange={(e) => onChange(e.target.value)} />
+    <textarea {...common} rows={1} onChange={(e) => onChange(e.target.value)} />
   ) : (
     <input {...common} type={type} onChange={(e) => onChange(e.target.value)} />
   );

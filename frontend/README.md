@@ -11,9 +11,15 @@ only.
 - Lists jobs 50 per page, newest added first, with pagination at the bottom
 - Click a column header to sort by it; click again to reverse
 - Job titles link to the posting (opens in a new tab)
-- Status, contact name/email/phone, and notes are edited in place and **save automatically**:
-  status saves on change; text fields save when you pause typing (~0.8s) or leave the field.
-  Each row shows "Saving…", "Saved", or "Not saved" (hover for the error).
+- Status, location, salary, contact name/email/phone, and notes are edited in place and **save
+  automatically**: status saves on change; text fields save when you pause typing (~0.8s) or leave
+  the field. The row's Updated column briefly shows "Saving…" / "Saved ✓", or "Not saved" (hover
+  for the error).
+- Dates in the current year show without the year; hover for the full date/time.
+- **Rescan job postings** starts a scan in the bff. A modal shows each company's progress live; it
+  can be closed while the scan keeps running (the button shows progress). Each company that fails
+  raises a notification with the error, which stays until dismissed. The table reloads when the
+  scan finishes.
 
 ## Stack
 
@@ -24,13 +30,16 @@ only.
 ## Layout
 
 ```
-src/api.ts                    GraphQL queries (listJobs, updateJob)
+src/api.ts                    GraphQL queries, plus watchScan (reads the SSE progress stream)
+src/useScan.ts                Scan state: start, follow progress, failure notifications
 src/types.ts                  Types mirroring bff/graph/schema.graphqls
 src/App.tsx                   Page: loading, sort and page state
 src/components/JobsTable.tsx  Table header and sorting
 src/components/JobRow.tsx     One row; saves edits and shows save state
 src/components/AutoSaveField.tsx  Text input/textarea that saves itself
 src/components/Pagination.tsx
+src/components/ScanModal.tsx  Scan progress modal
+src/components/Toasts.tsx     Error notifications
 ```
 
 ## Running

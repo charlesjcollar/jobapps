@@ -1,8 +1,7 @@
 # GraphQL schema for the jobapps BFF.
 #
-# Two clients use this API:
-#   - frontend: reads, lists, and updates jobs (job, jobs, updateJob)
-#   - engine:   submits newly discovered postings (submitJobs)
+# Used by the frontend to read, list, and update jobs, and to run scans that look for new
+# postings. Subscriptions are served over Server-Sent Events at POST /graphql/stream.
 
 """Calendar date with no time, formatted YYYY-MM-DD."""
 scalar Date
@@ -45,6 +44,10 @@ type Job {
   contactName: String
   contactEmail: String
   contactPhone: String
+  "As the posting states it, e.g. \"$150k–$190k\". Null if not listed."
+  salaryRange: String
+  "E.g. \"Remote (US)\" or \"Seattle, WA\". Null if not listed."
+  location: String
 }
 
 """One page of jobs."""
@@ -57,6 +60,9 @@ type JobPage {
 type Query {
   "A single job by primary key, or null if it doesn't exist."
   job(id: ID!): Job
+
+  "The scan in progress, or null if none is running."
+  currentScan: Scan
 
   """
   Jobs in pages. limit defaults to 50 (max 500); offset defaults to 0.
@@ -109,7 +115,8 @@ input JobFilter {
 
 """
 Fields to change on a job. Omitted fields are left unchanged.
-postedDate, notes, and the contact fields can be cleared by passing null explicitly.
+postedDate, notes, salaryRange, location, and the contact fields can be cleared by passing
+null explicitly.
 id, retrievedDate, and lastUpdated can't be set.
 """
 input UpdateJobInput {
@@ -123,28 +130,57 @@ input UpdateJobInput {
   contactName: String
   contactEmail: String
   contactPhone: String
-}
-
-"""A posting found by the engine."""
-input NewJobInput {
-  companyName: String!
-  jobTitle: String!
-  postingId: String!
-  link: String!
-  postedDate: Date
-}
-
-type SubmitJobsResult {
-  "Postings saved by this call. New jobs start with status NEW."
-  inserted: [Job!]!
-  "Number of submitted postings skipped because (companyName, postingId) was already saved or repeated in the batch."
-  skippedCount: Int!
+  salaryRange: String
+  location: String
 }
 
 type Mutation {
   "Update one job by primary key. Errors if the job doesn't exist."
   updateJob(id: ID!, input: UpdateJobInput!): Job!
 
-  "Engine only: submit every posting found in a scan. Already-saved postings are skipped."
-  submitJobs(jobs: [NewJobInput!]!): SubmitJobsResult!
+  """
+  Start scanning every configured company for new postings. Returns right away with the
+  plugins that will run; follow progress with the scanUpdated subscription. If a scan is
+  already running, returns that scan instead of starting another.
+  """
+  startScan: Scan!
+}
+
+type Subscription {
+  """
+  The scan's current state immediately, then again every time a plugin starts or finishes.
+  Completes after the scan finishes.
+  """
+  scanUpdated(id: ID!): Scan!
+}
+
+enum PluginRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+"""One plugin (one company's job board) within a scan."""
+type PluginRun {
+  name: String!
+  status: PluginRunStatus!
+  startedAt: DateTime
+  finishedAt: DateTime
+  "Postings the plugin returned."
+  jobsFound: Int!
+  "Postings that weren't already saved."
+  jobsAdded: Int!
+  "What went wrong, when status is FAILED."
+  error: String
+}
+
+type Scan {
+  id: ID!
+  startedAt: DateTime!
+  "Null while running."
+  finishedAt: DateTime
+  running: Boolean!
+  "In display order. Empty when no plugins are configured."
+  plugins: [PluginRun!]!
 }

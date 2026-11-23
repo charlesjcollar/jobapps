@@ -12,6 +12,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 
+	"jobapps/bff/scan"
 	"jobapps/bff/store"
 )
 
@@ -20,14 +21,15 @@ var schemaSDL string
 
 const maxLimit = 500
 
-// NewSchema parses the schema and binds it to resolvers backed by s.
-func NewSchema(s *store.Store) (*graphql.Schema, error) {
-	return graphql.ParseSchema(schemaSDL, &Resolver{store: s}, graphql.UseFieldResolvers())
+// NewSchema parses the schema and binds it to resolvers backed by s and scans.
+func NewSchema(s *store.Store, scans *scan.Manager) (*graphql.Schema, error) {
+	return graphql.ParseSchema(schemaSDL, &Resolver{store: s, scans: scans}, graphql.UseFieldResolvers())
 }
 
-// Resolver resolves every Query and Mutation field.
+// Resolver resolves every Query, Mutation, and Subscription field.
 type Resolver struct {
 	store *store.Store
+	scans *scan.Manager
 }
 
 // job is the GraphQL Job type. Fields are matched to the schema by name.
@@ -45,6 +47,8 @@ type job struct {
 	ContactName   *string
 	ContactEmail  *string
 	ContactPhone  *string
+	SalaryRange   *string
+	Location      *string
 }
 
 func toJob(j store.Job) *job {
@@ -61,6 +65,8 @@ func toJob(j store.Job) *job {
 		ContactName:   j.ContactName,
 		ContactEmail:  j.ContactEmail,
 		ContactPhone:  j.ContactPhone,
+		SalaryRange:   j.SalaryRange,
+		Location:      j.Location,
 	}
 	if j.PostedDate != nil {
 		out.PostedDate = &Date{*j.PostedDate}
@@ -170,6 +176,8 @@ type updateJobInput struct {
 	ContactName  graphql.NullString
 	ContactEmail graphql.NullString
 	ContactPhone graphql.NullString
+	SalaryRange  graphql.NullString
+	Location     graphql.NullString
 }
 
 func (r *Resolver) UpdateJob(ctx context.Context, args struct {
@@ -210,6 +218,8 @@ func (r *Resolver) UpdateJob(ctx context.Context, args struct {
 	u.ContactName = nullable(in.ContactName)
 	u.ContactEmail = nullable(in.ContactEmail)
 	u.ContactPhone = nullable(in.ContactPhone)
+	u.SalaryRange = nullable(in.SalaryRange)
+	u.Location = nullable(in.Location)
 
 	j, err := r.store.UpdateJob(ctx, id, u)
 	if err != nil {
@@ -219,52 +229,6 @@ func (r *Resolver) UpdateJob(ctx context.Context, args struct {
 		return nil, fmt.Errorf("job %s not found", args.ID)
 	}
 	return toJob(*j), nil
-}
-
-type newJobInput struct {
-	CompanyName string
-	JobTitle    string
-	PostingID   string
-	Link        string
-	PostedDate  *Date
-}
-
-type submitJobsResult struct {
-	Inserted     []*job
-	SkippedCount int32
-}
-
-func (r *Resolver) SubmitJobs(ctx context.Context, args struct{ Jobs []newJobInput }) (*submitJobsResult, error) {
-	newJobs := make([]store.NewJob, len(args.Jobs))
-	for i, in := range args.Jobs {
-		n := store.NewJob{PostedDate: dateToTime(in.PostedDate)}
-		for _, f := range []struct {
-			name string
-			in   string
-			out  *string
-		}{
-			{"companyName", in.CompanyName, &n.CompanyName},
-			{"jobTitle", in.JobTitle, &n.JobTitle},
-			{"postingId", in.PostingID, &n.PostingID},
-			{"link", in.Link, &n.Link},
-		} {
-			v, err := required(f.name, f.in)
-			if err != nil {
-				return nil, fmt.Errorf("jobs[%d]: %w", i, err)
-			}
-			*f.out = v
-		}
-		newJobs[i] = n
-	}
-
-	inserted, err := r.store.InsertNew(ctx, newJobs)
-	if err != nil {
-		return nil, err
-	}
-	return &submitJobsResult{
-		Inserted:     toJobs(inserted),
-		SkippedCount: int32(len(newJobs) - len(inserted)),
-	}, nil
 }
 
 // required trims s and rejects it if it's empty.

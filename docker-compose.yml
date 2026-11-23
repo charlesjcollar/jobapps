@@ -38,11 +38,13 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # GraphQL API for the frontend and engine: http://localhost:8080/graphql
+  # GraphQL API and job scanner: http://localhost:8080/graphql
   bff:
     build: ./bff
     environment:
       DATABASE_URL: postgres://jobapps:jobapps@db:5432/jobapps?sslmode=disable
+      # Fake scan plugins for trying the scan UI. They save nothing. Remove once real plugins exist.
+      DEMO_PLUGINS: "true"
     ports:
       - "8080:8080"
     depends_on:

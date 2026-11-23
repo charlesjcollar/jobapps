@@ -4,12 +4,17 @@ Guidance for Claude Code when working in this repo.
 
 ## Project overview
 
-Personal app for managing job postings I may apply to. Four parts, built in this order:
+Personal app for managing job postings I may apply to. Three parts:
 
-1. `db/` — lightweight database
+1. `db/` — Postgres + Flyway migrations
 2. `frontend/` — React + TypeScript web UI
-3. `bff/` — Go backend-for-frontend API
-4. `engine/` — background job scanner
+3. `bff/` — Go GraphQL API. Also runs scans: one plugin per company (`bff/plugins/`), orchestrated
+   by `bff/scan/`, with progress streamed to the frontend over SSE.
+
+Jobs enter the database only through scans. There is one scan plugin per company, and I pick the
+companies by hand (based on culture, ethics, etc.). Plugins for companies on the same job-board system
+(Greenhouse, Lever, Workday, ...) share code from a common package under `bff/plugins/`. Scan history
+is in memory only, by design.
 
 Each posting also has a folder at `db/<company_name>/<posting_id>/` holding the saved posting page and the resume/cover letter submitted (personal documents, gitignored). See `db/README.md`.
 
@@ -42,6 +47,6 @@ See `README.md` and each folder's `README.md` for details.
 
 <!-- Go-specific preferences -->
 
-## Engine
+## Scan plugins
 
-<!-- Engine-specific preferences -->
+<!-- Plugin-specific preferences -->

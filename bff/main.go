@@ -16,6 +16,8 @@ import (
 	_ "github.com/lib/pq"
 
 	"jobapps/bff/graph"
+	"jobapps/bff/plugins"
+	"jobapps/bff/scan"
 	"jobapps/bff/store"
 )
 
@@ -32,13 +34,16 @@ func main() {
 		log.Fatalf("connecting to database: %v", err)
 	}
 
-	schema, err := graph.NewSchema(store.New(db))
+	st := store.New(db)
+	scans := scan.NewManager(plugins.All(), st, scan.Options{})
+	schema, err := graph.NewSchema(st, scans)
 	if err != nil {
 		log.Fatalf("parsing schema: %v", err)
 	}
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /graphql", &relay.Handler{Schema: schema})
+	mux.Handle("POST /graphql/stream", graph.StreamHandler(schema))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := db.PingContext(r.Context()); err != nil {
 			http.Error(w, "database unavailable", http.StatusServiceUnavailable)

@@ -1,4 +1,5 @@
 const dateFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+const monthDayFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 const dateTimeFmt = new Intl.DateTimeFormat(undefined, {
   month: "short",
   day: "numeric",
@@ -7,18 +8,27 @@ const dateTimeFmt = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
-/** Formats a YYYY-MM-DD calendar date without shifting it into another time zone. */
-export function formatDate(ymd: string): string {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return dateFmt.format(new Date(y, m - 1, d));
+/** Parses YYYY-MM-DD as a local calendar date, or an RFC 3339 timestamp as-is. */
+function parse(value: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
 }
 
-/** Formats the local calendar date of an RFC 3339 timestamp. */
-export function formatTimestampDate(iso: string): string {
-  return dateFmt.format(new Date(iso));
+/** Full date, e.g. "Nov 20, 2026". Accepts YYYY-MM-DD or a timestamp. */
+export function formatDate(value: string): string {
+  return dateFmt.format(parse(value));
 }
 
-/** Formats an RFC 3339 timestamp in local time. */
+/** "Nov 20" in the current year, "Nov 20, 2025" otherwise. */
+export function shortDate(value: string): string {
+  const d = parse(value);
+  return d.getFullYear() === new Date().getFullYear() ? monthDayFmt.format(d) : dateFmt.format(d);
+}
+
+/** Date and time in local time. */
 export function formatDateTime(iso: string): string {
   return dateTimeFmt.format(new Date(iso));
 }

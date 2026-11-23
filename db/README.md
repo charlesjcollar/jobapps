@@ -46,8 +46,10 @@ already been applied — add a new one instead.
 | `contact_name` | `TEXT` | Nullable. Recruiter or hiring manager, once the company reaches out |
 | `contact_email` | `TEXT` | Nullable |
 | `contact_phone` | `TEXT` | Nullable |
+| `salary_range` | `TEXT` | Nullable, free text as the posting states it (e.g. `$150k–$190k`) |
+| `location` | `TEXT` | Nullable, free text (e.g. `Remote (US)`, `Seattle, WA`) |
 
-`(company_name, posting_id)` is unique so the engine can skip postings it already has.
+`(company_name, posting_id)` is unique so scans can skip postings already saved.
 
 **Statuses:** `NEW`, `INTERESTED`, `APPLIED`, `INTERVIEWING`, `OFFER`, `USER_REJECTED`, `COMPANY_REJECTED`, `EXPIRED` (posting came down before I applied)
 
@@ -70,7 +72,8 @@ db/
 
 - The path is `db/<company_name>/<posting_id>/`, using the same values as the `jobs` row, so a row
   maps straight to its folder.
-- The engine saves the rendered posting when it finds a job. Postings can also be added by hand.
+- The rendered posting is saved by hand for now. Whether scan plugins save it automatically is
+  undecided.
 - The resume and cover letter are added when applying, so there is a record of exactly what was
   submitted.
 

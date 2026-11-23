@@ -12,30 +12,25 @@ is kept out of the repo by `.gitignore` and Docker volumes.
 ## Architecture
 
 ```
-┌────────────┐     HTTP/JSON     ┌──────────┐            ┌──────────┐
-│  frontend  │ ────────────────▶ │   bff    │ ─────────▶ │    db    │
-│ React + TS │                   │   (Go)   │            │          │
-└────────────┘                   └──────────┘            └──────────┘
-                                                              ▲
-                                 ┌──────────┐                 │
-                                 │  engine  │ ────────────────┘
-                                 │ (scanner)│  writes discovered postings
-                                 └──────────┘
+┌────────────┐   GraphQL (HTTP + SSE)   ┌──────────────────┐            ┌──────────┐
+│  frontend  │ ───────────────────────▶ │       bff        │ ─────────▶ │    db    │
+│ React + TS │ ◀─── scan progress ───── │       (Go)       │            │ Postgres │
+└────────────┘                          │  scan plugins ───┼──▶ company job boards
+                                        └──────────────────┘
 ```
+
+Clicking **Rescan job postings** in the UI starts a scan in the bff. The bff runs one plugin per
+configured company, saves any postings it hasn't seen before, and streams progress back to the UI.
 
 | Part | Folder | Description |
 |------|--------|-------------|
 | Database | [`db/`](db/README.md) | PostgreSQL + Flyway migrations, plus a file archive of saved postings and submitted resumes/cover letters |
 | Frontend | [`frontend/`](frontend/README.md) | Simple web UI (React + TypeScript) |
-| BFF | [`bff/`](bff/README.md) | Backend-for-frontend API (Go) |
-| Engine | [`engine/`](engine/README.md) | Background job that scans sources for new postings |
+| BFF | [`bff/`](bff/README.md) | GraphQL API (Go), including the job scanner and its per-company plugins |
 
-## Build order
+## Status
 
-1. Database
-2. Frontend
-3. BFF
-4. Engine
+Done: database, frontend, bff, scan orchestration. Next: real company scan plugins.
 
 ## Getting started
 
@@ -46,4 +41,4 @@ docker compose up -d
 Then open http://localhost:3000.
 
 This starts the database, applies migrations, and runs the BFF (http://localhost:8080/graphql) and
-the frontend. The engine will be added once it's built.
+the frontend.

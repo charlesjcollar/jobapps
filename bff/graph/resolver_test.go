@@ -9,22 +9,24 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
 	graphql "github.com/graph-gophers/graphql-go"
 	_ "github.com/lib/pq"
 
+	"jobapps/bff/scan"
 	"jobapps/bff/store"
 )
 
 // newTestSchema runs the db migrations into a throwaway Postgres schema and
-// returns a GraphQL schema backed by it. The throwaway schema is dropped when
+// returns a GraphQL schema and store backed by it. The throwaway schema is dropped when
 // the test ends, so existing data in the database is never touched.
 //
 // Set TEST_DATABASE_URL to run, e.g.
 // postgres://jobapps:jobapps@localhost:5432/jobapps?sslmode=disable
-func newTestSchema(t *testing.T) *graphql.Schema {
+func newTestSchema(t *testing.T) (*graphql.Schema, *store.Store) {
 	t.Helper()
 	base := os.Getenv("TEST_DATABASE_URL")
 	if base == "" {
@@ -73,11 +75,12 @@ func newTestSchema(t *testing.T) *graphql.Schema {
 		}
 	}
 
-	s, err := NewSchema(store.New(db))
+	st := store.New(db)
+	s, err := NewSchema(st, scan.NewManager(nil, st, scan.Options{}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return s
+	return s, st
 }
 
 // exec runs a GraphQL operation and decodes its data into out. It fails the
@@ -104,77 +107,79 @@ func mustExec(t *testing.T, s *graphql.Schema, query string, vars map[string]any
 	}
 }
 
-const submitMutation = `mutation($jobs: [NewJobInput!]!) {
-	submitJobs(jobs: $jobs) { skippedCount inserted { id companyName postingId status postedDate } }
-}`
+func newJob(company, postingID, title string) store.NewJob {
+	return store.NewJob{CompanyName: company, JobTitle: title, PostingID: postingID, Link: "https://example.com/" + postingID}
+}
 
-type submitResp struct {
-	SubmitJobs struct {
-		SkippedCount int
-		Inserted     []struct {
-			ID, CompanyName, PostingID, Status string
-			PostedDate                         *string
+func withPosted(j store.NewJob, ymd string) store.NewJob {
+	d, _ := time.Parse("2006-01-02", ymd)
+	j.PostedDate = &d
+	return j
+}
+
+// seed saves jobs the way a scan does and returns the ones inserted, as GraphQL IDs.
+func seed(t *testing.T, st *store.Store, jobs ...store.NewJob) []string {
+	t.Helper()
+	inserted, err := st.InsertNew(context.Background(), jobs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]string, len(inserted))
+	for i, j := range inserted {
+		ids[i] = strconv.FormatInt(j.ID, 10)
+	}
+	return ids
+}
+
+func TestInsertNewSkipsDuplicates(t *testing.T) {
+	s, st := newTestSchema(t)
+
+	first := withPosted(newJob("Acme", "A1", "Engineer"), "2026-11-20")
+	salary, location, blank := "$150k–$190k", "Remote (US)", "  "
+	first.SalaryRange, first.Location = &salary, &location
+	second := newJob("Acme", "A2", "Designer")
+	second.SalaryRange = &blank
+	ids := seed(t, st,
+		first,
+		second,
+		newJob("Acme", "A2", "Designer"), // repeated in batch
+	)
+	if len(ids) != 2 {
+		t.Fatalf("first insert: got %d, want 2", len(ids))
+	}
+
+	var got struct {
+		Job struct {
+			Status, PostedDate    string
+			SalaryRange, Location *string
 		}
 	}
-}
-
-func newJob(company, postingID, title string) map[string]any {
-	return map[string]any{
-		"companyName": company,
-		"jobTitle":    title,
-		"postingId":   postingID,
-		"link":        "https://example.com/" + postingID,
+	q := `query($id: ID!) { job(id: $id) { status postedDate salaryRange location } }`
+	mustExec(t, s, q, map[string]any{"id": ids[0]}, &got)
+	if got.Job.Status != "NEW" || got.Job.PostedDate != "2026-11-20" ||
+		got.Job.SalaryRange == nil || *got.Job.SalaryRange != salary || got.Job.Location == nil || *got.Job.Location != location {
+		t.Errorf("inserted job: got %+v", got.Job)
 	}
-}
-
-func TestSubmitJobsSkipsDuplicates(t *testing.T) {
-	s := newTestSchema(t)
-
-	first := newJob("Acme", "A1", "Engineer")
-	first["postedDate"] = "2026-11-20"
-	var r submitResp
-	mustExec(t, s, submitMutation, map[string]any{"jobs": []any{
-		first,
-		newJob("Acme", "A2", "Designer"),
-		newJob("Acme", "A2", "Designer"), // repeated in batch
-	}}, &r)
-
-	if r.SubmitJobs.SkippedCount != 1 || len(r.SubmitJobs.Inserted) != 2 {
-		t.Fatalf("first submit: got %+v", r.SubmitJobs)
-	}
-	got := r.SubmitJobs.Inserted[0]
-	if got.Status != "NEW" || got.PostedDate == nil || *got.PostedDate != "2026-11-20" {
-		t.Errorf("inserted job: got %+v", got)
+	mustExec(t, s, q, map[string]any{"id": ids[1]}, &got)
+	if got.Job.SalaryRange != nil || got.Job.Location != nil {
+		t.Errorf("blank salary should be stored as null: got %+v", got.Job)
 	}
 
 	// Second scan: A1 already saved, A3 new.
-	mustExec(t, s, submitMutation, map[string]any{"jobs": []any{
-		newJob("Acme", "A1", "Engineer"),
-		newJob("Acme", "A3", "PM"),
-	}}, &r)
-	if r.SubmitJobs.SkippedCount != 1 || len(r.SubmitJobs.Inserted) != 1 || r.SubmitJobs.Inserted[0].PostingID != "A3" {
-		t.Fatalf("second submit: got %+v", r.SubmitJobs)
-	}
-
-	// Empty fields are rejected.
-	errs := exec(t, s, submitMutation, map[string]any{"jobs": []any{newJob(" ", "A9", "x")}}, nil)
-	if len(errs) == 0 {
-		t.Error("expected error for empty companyName")
+	inserted, err := st.InsertNew(context.Background(), []store.NewJob{newJob("Acme", "A1", "Engineer"), newJob("Acme", "A3", "PM")})
+	if err != nil || len(inserted) != 1 || inserted[0].PostingID != "A3" {
+		t.Fatalf("second insert: got %+v, %v", inserted, err)
 	}
 }
 
 func TestJobAndUpdateJob(t *testing.T) {
-	s := newTestSchema(t)
-
-	j := newJob("Acme", "A1", "Engineer")
-	j["postedDate"] = "2026-11-20"
-	var sr submitResp
-	mustExec(t, s, submitMutation, map[string]any{"jobs": []any{j}}, &sr)
-	id := sr.SubmitJobs.Inserted[0].ID
+	s, st := newTestSchema(t)
+	id := seed(t, st, withPosted(newJob("Acme", "A1", "Engineer"), "2026-11-20"))[0]
 
 	type jobResp struct {
 		ID, Status, JobTitle, RetrievedDate, LastUpdated string
 		Notes, PostedDate, ContactName, ContactEmail     *string
+		SalaryRange, Location                            *string
 	}
 
 	var got struct{ Job *jobResp }
@@ -190,7 +195,9 @@ func TestJobAndUpdateJob(t *testing.T) {
 	}
 
 	const update = `mutation($id: ID!, $input: UpdateJobInput!) {
-		updateJob(id: $id, input: $input) { id status jobTitle notes postedDate retrievedDate lastUpdated contactName contactEmail }
+		updateJob(id: $id, input: $input) {
+			id status jobTitle notes postedDate retrievedDate lastUpdated contactName contactEmail salaryRange location
+		}
 	}`
 	var up struct{ UpdateJob jobResp }
 
@@ -205,6 +212,16 @@ func TestJobAndUpdateJob(t *testing.T) {
 	mustExec(t, s, update, map[string]any{"id": id, "input": map[string]any{"contactName": "Pat Lee", "contactEmail": "pat@example.com"}}, &up)
 	if up.UpdateJob.ContactName == nil || *up.UpdateJob.ContactName != "Pat Lee" || up.UpdateJob.ContactEmail == nil {
 		t.Errorf("contact update: got %+v", up.UpdateJob)
+	}
+
+	// Salary and location.
+	mustExec(t, s, update, map[string]any{"id": id, "input": map[string]any{"salaryRange": "$200k", "location": "NYC"}}, &up)
+	if up.UpdateJob.SalaryRange == nil || *up.UpdateJob.SalaryRange != "$200k" || up.UpdateJob.Location == nil || *up.UpdateJob.Location != "NYC" {
+		t.Errorf("salary/location update: got %+v", up.UpdateJob)
+	}
+	mustExec(t, s, update, map[string]any{"id": id, "input": map[string]any{"salaryRange": nil}}, &up)
+	if up.UpdateJob.SalaryRange != nil || up.UpdateJob.Location == nil {
+		t.Errorf("clear salary: got %+v", up.UpdateJob)
 	}
 
 	// Explicit null or a blank string clears nullable fields.
@@ -222,32 +239,28 @@ func TestJobAndUpdateJob(t *testing.T) {
 	}
 
 	// Changing postingId to collide with another job is rejected.
-	mustExec(t, s, submitMutation, map[string]any{"jobs": []any{newJob("Acme", "A2", "Other")}}, &sr)
+	seed(t, st, newJob("Acme", "A2", "Other"))
 	if errs := exec(t, s, update, map[string]any{"id": id, "input": map[string]any{"postingId": "A2"}}, nil); len(errs) == 0 {
 		t.Error("expected duplicate error")
 	}
 }
 
 func TestJobsListFilterSortPage(t *testing.T) {
-	s := newTestSchema(t)
+	s, st := newTestSchema(t)
 
 	// Insert 5 jobs, then give them distinct statuses.
-	jobs := []any{
+	jobIDs := seed(t, st,
 		newJob("Acme", "1", "Senior Engineer"),
-		newJob("Beta Co", "2", "Designer"),
+		withPosted(newJob("Beta Co", "2", "Designer"), "2026-01-01"),
 		newJob("acme labs", "3", "Staff Engineer"),
-		newJob("Gamma", "4", "Engineer_Intern"),
+		withPosted(newJob("Gamma", "4", "Engineer_Intern"), "2026-06-01"),
 		newJob("Delta", "5", "Recruiter Lead"), // "rui" would match r_i if _ were a wildcard
-	}
-	jobs[1].(map[string]any)["postedDate"] = "2026-01-01"
-	jobs[3].(map[string]any)["postedDate"] = "2026-06-01"
-	var sr submitResp
-	mustExec(t, s, submitMutation, map[string]any{"jobs": jobs}, &sr)
+	)
 
 	statuses := []string{"APPLIED", "USER_REJECTED", "NEW", "COMPANY_REJECTED", "INTERVIEWING"}
-	for i, j := range sr.SubmitJobs.Inserted {
+	for i, id := range jobIDs {
 		mustExec(t, s, `mutation($id: ID!, $s: JobStatus!) { updateJob(id: $id, input: {status: $s}) { id } }`,
-			map[string]any{"id": j.ID, "s": statuses[i]}, nil)
+			map[string]any{"id": id, "s": statuses[i]}, nil)
 	}
 
 	type page struct {

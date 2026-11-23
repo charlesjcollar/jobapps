@@ -10,7 +10,8 @@ interface Column {
 const COLUMNS: Column[] = [
   { label: "Company", sortField: "COMPANY_NAME" },
   { label: "Title", sortField: "JOB_TITLE" },
-  { label: "Posting ID" },
+  { label: "Location" },
+  { label: "Salary" },
   { label: "Posted", sortField: "POSTED_DATE" },
   { label: "Added", sortField: "RETRIEVED_DATE" },
   { label: "Status", sortField: "STATUS" },
@@ -19,7 +20,6 @@ const COLUMNS: Column[] = [
   { label: "Phone" },
   { label: "Notes", className: "notes" },
   { label: "Updated", sortField: "LAST_UPDATED" },
-  { label: "", className: "save-state" },
 ];
 
 // Dates sort newest first on the first click; everything else A→Z.

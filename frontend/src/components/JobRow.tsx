@@ -1,10 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { updateJob } from "../api";
 import { STATUSES, STATUS_LABELS, type Job, type JobStatus, type JobUpdate } from "../types";
-import { formatDate, formatDateTime, formatTimestampDate } from "../format";
+import { formatDate, formatDateTime, shortDate } from "../format";
 import AutoSaveField from "./AutoSaveField";
 
 type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
+
+const SAVED_DISPLAY_MS = 2000;
 
 interface Props {
   job: Job;
@@ -15,6 +17,13 @@ export default function JobRow({ job, onChange }: Props) {
   const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
   // Only the newest save's response is applied, in case responses arrive out of order.
   const latestSave = useRef(0);
+
+  // "Saved" shows briefly, then the Updated column goes back to the date.
+  useEffect(() => {
+    if (saveState.kind !== "saved") return;
+    const t = window.setTimeout(() => setSaveState({ kind: "idle" }), SAVED_DISPLAY_MS);
+    return () => window.clearTimeout(t);
+  }, [saveState]);
 
   const save = async (update: JobUpdate, previous?: Job) => {
     const seq = ++latestSave.current;
@@ -45,10 +54,18 @@ export default function JobRow({ job, onChange }: Props) {
           {job.jobTitle}
           <span aria-hidden className="external">↗</span>
         </a>
+        <div className="posting-id mono muted" title="Posting ID">{job.postingId}</div>
       </td>
-      <td className="mono">{job.postingId}</td>
-      <td className="date">{job.postedDate ? formatDate(job.postedDate) : <span className="muted">—</span>}</td>
-      <td className="date" title={formatDateTime(job.retrievedDate)}>{formatTimestampDate(job.retrievedDate)}</td>
+      <td className="location">
+        <AutoSaveField label="Location" placeholder="Location" multiline value={job.location} onSave={(v) => save({ location: v })} />
+      </td>
+      <td className="salary">
+        <AutoSaveField label="Salary range" placeholder="Salary" multiline value={job.salaryRange} onSave={(v) => save({ salaryRange: v })} />
+      </td>
+      <td className="date" title={job.postedDate ? formatDate(job.postedDate) : undefined}>
+        {job.postedDate ? shortDate(job.postedDate) : <span className="muted">—</span>}
+      </td>
+      <td className="date" title={formatDateTime(job.retrievedDate)}>{shortDate(job.retrievedDate)}</td>
       <td>
         <select
           value={job.status}
@@ -75,10 +92,10 @@ export default function JobRow({ job, onChange }: Props) {
       <td className="notes">
         <AutoSaveField label="Notes" placeholder="Notes" multiline value={job.notes} onSave={(v) => save({ notes: v })} />
       </td>
-      <td className="date" title={formatDateTime(job.lastUpdated)}>{formatTimestampDate(job.lastUpdated)}</td>
-      <td className="save-state">
+      <td className="date updated" title={formatDateTime(job.lastUpdated)} aria-live="polite">
+        {saveState.kind === "idle" && shortDate(job.lastUpdated)}
         {saveState.kind === "saving" && <span className="muted">Saving…</span>}
-        {saveState.kind === "saved" && <span className="ok">Saved</span>}
+        {saveState.kind === "saved" && <span className="ok">Saved ✓</span>}
         {saveState.kind === "error" && (
           <span className="error" title={saveState.message}>
             Not saved
