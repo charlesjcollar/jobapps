@@ -1,0 +1,53 @@
+# Starts every jobapps service locally.
+#   docker compose up -d
+#
+# Local-only: credentials are hardcoded on purpose. Database contents live in the db-data volume,
+# never in the repo.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: jobapps
+      POSTGRES_USER: jobapps
+      POSTGRES_PASSWORD: jobapps
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobapps -d jobapps"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # Applies any pending migrations from db/migrations, then exits.
+  # Flyway tracks what has already run, so this is a no-op on an up-to-date database.
+  flyway:
+    image: flyway/flyway:11-alpine
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/jobapps
+      FLYWAY_USER: jobapps
+      FLYWAY_PASSWORD: jobapps
+      FLYWAY_CONNECT_RETRIES: 10
+    volumes:
+      - ./db/migrations:/flyway/sql:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # GraphQL API for the frontend and engine: http://localhost:8080/graphql
+  bff:
+    build: ./bff
+    environment:
+      DATABASE_URL: postgres://jobapps:jobapps@db:5432/jobapps?sslmode=disable
+    ports:
+      - "8080:8080"
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:

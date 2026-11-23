@@ -1,0 +1,141 @@
+# GraphQL schema for the jobapps BFF.
+#
+# Two clients use this API:
+#   - frontend: reads, lists, and updates jobs (job, jobs, updateJob)
+#   - engine:   submits newly discovered postings (submitJobs)
+
+"""Calendar date with no time, formatted YYYY-MM-DD."""
+scalar Date
+
+"""Timestamp in RFC 3339 format, e.g. 2026-11-23T14:05:00Z."""
+scalar DateTime
+
+enum JobStatus {
+  "Found, not yet reviewed."
+  NEW
+  "Reviewed, plan to apply."
+  INTERESTED
+  APPLIED
+  INTERVIEWING
+  OFFER
+  "I decided not to pursue it."
+  USER_REJECTED
+  "The company turned me down."
+  COMPANY_REJECTED
+}
+
+type Job {
+  id: ID!
+  companyName: String!
+  jobTitle: String!
+  "The company's own ID for the posting."
+  postingId: String!
+  "URL to the posting."
+  link: String!
+  "Null when the source doesn't say."
+  postedDate: Date
+  retrievedDate: DateTime!
+  status: JobStatus!
+  "Set automatically on every update."
+  lastUpdated: DateTime!
+  notes: String
+}
+
+"""One page of jobs."""
+type JobPage {
+  items: [Job!]!
+  "Total number of jobs across all pages."
+  totalCount: Int!
+}
+
+type Query {
+  "A single job by primary key, or null if it doesn't exist."
+  job(id: ID!): Job
+
+  """
+  Jobs in pages. limit defaults to 50 (max 500); offset defaults to 0.
+  With no filter, every job is returned. With no sort, newest retrieved comes first.
+  """
+  jobs(
+    filter: JobFilter
+    sort: JobSort = { field: RETRIEVED_DATE, direction: DESC }
+    limit: Int = 50
+    offset: Int = 0
+  ): JobPage!
+}
+
+enum JobSortField {
+  COMPANY_NAME
+  JOB_TITLE
+  "Jobs with no posted date sort last in either direction."
+  POSTED_DATE
+  RETRIEVED_DATE
+  "Sorts in workflow order (NEW, INTERESTED, APPLIED, ...), not alphabetically."
+  STATUS
+  LAST_UPDATED
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+"""
+Sort column and direction. Ties are broken by id so paging is stable.
+"""
+input JobSort {
+  field: JobSortField!
+  direction: SortDirection! = ASC
+}
+
+"""
+Narrows the jobs list. Omitted fields don't filter; set fields are combined with AND.
+Text matches are case-insensitive substrings.
+"""
+input JobFilter {
+  "Only jobs whose status is one of these. An empty list matches nothing."
+  statuses: [JobStatus!]
+  "Leave out jobs whose status is one of these, e.g. [USER_REJECTED, COMPANY_REJECTED]."
+  excludedStatuses: [JobStatus!]
+  companyName: String
+  jobTitle: String
+}
+
+"""
+Fields to change on a job. Omitted fields are left unchanged.
+postedDate and notes can be cleared by passing null explicitly.
+id, retrievedDate, and lastUpdated can't be set.
+"""
+input UpdateJobInput {
+  companyName: String
+  jobTitle: String
+  postingId: String
+  link: String
+  postedDate: Date
+  status: JobStatus
+  notes: String
+}
+
+"""A posting found by the engine."""
+input NewJobInput {
+  companyName: String!
+  jobTitle: String!
+  postingId: String!
+  link: String!
+  postedDate: Date
+}
+
+type SubmitJobsResult {
+  "Postings saved by this call. New jobs start with status NEW."
+  inserted: [Job!]!
+  "Number of submitted postings skipped because (companyName, postingId) was already saved or repeated in the batch."
+  skippedCount: Int!
+}
+
+type Mutation {
+  "Update one job by primary key. Errors if the job doesn't exist."
+  updateJob(id: ID!, input: UpdateJobInput!): Job!
+
+  "Engine only: submit every posting found in a scan. Already-saved postings are skipped."
+  submitJobs(jobs: [NewJobInput!]!): SubmitJobsResult!
+}

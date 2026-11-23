@@ -1,0 +1,30 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+build/
+
+# Go
+bin/
+*.test
+*.out
+
+# Local DB files
+*.db
+*.sqlite
+*.sqlite3
+
+# Posting archive (personal documents) — keep only schema files under db/
+/db/*
+!/db/migrations/
+!/db/README.md
