@@ -174,7 +174,7 @@ func TestJobAndUpdateJob(t *testing.T) {
 
 	type jobResp struct {
 		ID, Status, JobTitle, RetrievedDate, LastUpdated string
-		Notes, PostedDate                                *string
+		Notes, PostedDate, ContactName, ContactEmail     *string
 	}
 
 	var got struct{ Job *jobResp }
@@ -190,7 +190,7 @@ func TestJobAndUpdateJob(t *testing.T) {
 	}
 
 	const update = `mutation($id: ID!, $input: UpdateJobInput!) {
-		updateJob(id: $id, input: $input) { id status jobTitle notes postedDate retrievedDate lastUpdated }
+		updateJob(id: $id, input: $input) { id status jobTitle notes postedDate retrievedDate lastUpdated contactName contactEmail }
 	}`
 	var up struct{ UpdateJob jobResp }
 
@@ -201,9 +201,16 @@ func TestJobAndUpdateJob(t *testing.T) {
 		t.Errorf("update 1: got %+v", up.UpdateJob)
 	}
 
-	// Explicit null clears postedDate and notes.
-	mustExec(t, s, update, map[string]any{"id": id, "input": map[string]any{"postedDate": nil, "notes": nil}}, &up)
-	if up.UpdateJob.PostedDate != nil || up.UpdateJob.Notes != nil || up.UpdateJob.Status != "APPLIED" {
+	// Contact fields.
+	mustExec(t, s, update, map[string]any{"id": id, "input": map[string]any{"contactName": "Pat Lee", "contactEmail": "pat@example.com"}}, &up)
+	if up.UpdateJob.ContactName == nil || *up.UpdateJob.ContactName != "Pat Lee" || up.UpdateJob.ContactEmail == nil {
+		t.Errorf("contact update: got %+v", up.UpdateJob)
+	}
+
+	// Explicit null or a blank string clears nullable fields.
+	mustExec(t, s, update, map[string]any{"id": id, "input": map[string]any{"postedDate": nil, "notes": nil, "contactName": "  "}}, &up)
+	if up.UpdateJob.PostedDate != nil || up.UpdateJob.Notes != nil || up.UpdateJob.ContactName != nil ||
+		up.UpdateJob.ContactEmail == nil || up.UpdateJob.Status != "APPLIED" {
 		t.Errorf("update 2: got %+v", up.UpdateJob)
 	}
 

@@ -42,6 +42,9 @@ type job struct {
 	Status        string
 	LastUpdated   DateTime
 	Notes         *string
+	ContactName   *string
+	ContactEmail  *string
+	ContactPhone  *string
 }
 
 func toJob(j store.Job) *job {
@@ -55,6 +58,9 @@ func toJob(j store.Job) *job {
 		Status:        j.Status,
 		LastUpdated:   DateTime{j.LastUpdated},
 		Notes:         j.Notes,
+		ContactName:   j.ContactName,
+		ContactEmail:  j.ContactEmail,
+		ContactPhone:  j.ContactPhone,
 	}
 	if j.PostedDate != nil {
 		out.PostedDate = &Date{*j.PostedDate}
@@ -154,13 +160,16 @@ func (r *Resolver) Jobs(ctx context.Context, args struct {
 // --- Mutation ---
 
 type updateJobInput struct {
-	CompanyName *string
-	JobTitle    *string
-	PostingID   *string
-	Link        *string
-	PostedDate  NullDate
-	Status      *string
-	Notes       graphql.NullString
+	CompanyName  *string
+	JobTitle     *string
+	PostingID    *string
+	Link         *string
+	PostedDate   NullDate
+	Status       *string
+	Notes        graphql.NullString
+	ContactName  graphql.NullString
+	ContactEmail graphql.NullString
+	ContactPhone graphql.NullString
 }
 
 func (r *Resolver) UpdateJob(ctx context.Context, args struct {
@@ -197,10 +206,10 @@ func (r *Resolver) UpdateJob(ctx context.Context, args struct {
 		u.SetPostedDate = true
 		u.PostedDate = dateToTime(in.PostedDate.Value)
 	}
-	if in.Notes.Set {
-		u.SetNotes = true
-		u.Notes = in.Notes.Value
-	}
+	u.Notes = nullable(in.Notes)
+	u.ContactName = nullable(in.ContactName)
+	u.ContactEmail = nullable(in.ContactEmail)
+	u.ContactPhone = nullable(in.ContactPhone)
 
 	j, err := r.store.UpdateJob(ctx, id, u)
 	if err != nil {
@@ -265,6 +274,19 @@ func required(name, s string) (string, error) {
 		return "", fmt.Errorf("%s can't be empty", name)
 	}
 	return s, nil
+}
+
+// nullable converts an optional GraphQL string into a store update: nil when
+// omitted, otherwise the value to write (nil value = NULL). Blank strings become
+// NULL; other values are stored as given.
+func nullable(n graphql.NullString) *store.Nullable {
+	if !n.Set {
+		return nil
+	}
+	if n.Value == nil || strings.TrimSpace(*n.Value) == "" {
+		return &store.Nullable{}
+	}
+	return &store.Nullable{Value: n.Value}
 }
 
 func dateToTime(d *Date) *time.Time {

@@ -49,5 +49,13 @@ services:
       flyway:
         condition: service_completed_successfully
 
+  # Web UI: http://localhost:3000
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - bff
+
 volumes:
   db-data:

@@ -22,6 +22,8 @@ enum JobStatus {
   USER_REJECTED
   "The company turned me down."
   COMPANY_REJECTED
+  "The posting came down before I applied."
+  EXPIRED
 }
 
 type Job {
@@ -39,6 +41,10 @@ type Job {
   "Set automatically on every update."
   lastUpdated: DateTime!
   notes: String
+  "Recruiter or hiring manager. Null until the company makes contact."
+  contactName: String
+  contactEmail: String
+  contactPhone: String
 }
 
 """One page of jobs."""
@@ -103,7 +109,7 @@ input JobFilter {
 
 """
 Fields to change on a job. Omitted fields are left unchanged.
-postedDate and notes can be cleared by passing null explicitly.
+postedDate, notes, and the contact fields can be cleared by passing null explicitly.
 id, retrievedDate, and lastUpdated can't be set.
 """
 input UpdateJobInput {
@@ -114,6 +120,9 @@ input UpdateJobInput {
   postedDate: Date
   status: JobStatus
   notes: String
+  contactName: String
+  contactEmail: String
+  contactPhone: String
 }
 
 """A posting found by the engine."""

@@ -43,4 +43,7 @@ is kept out of the repo by `.gitignore` and Docker volumes.
 docker compose up -d
 ```
 
-Currently starts the database, applies migrations, and runs the BFF at http://localhost:8080/graphql. More services will be added as they are built.
+Then open http://localhost:3000.
+
+This starts the database, applies migrations, and runs the BFF (http://localhost:8080/graphql) and
+the frontend. The engine will be added once it's built.

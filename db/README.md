@@ -43,10 +43,13 @@ already been applied — add a new one instead.
 | `status` | `TEXT` | See below; defaults to `NEW` |
 | `last_updated` | `TIMESTAMPTZ` | Set automatically by trigger on every update |
 | `notes` | `TEXT` | Nullable, free-form |
+| `contact_name` | `TEXT` | Nullable. Recruiter or hiring manager, once the company reaches out |
+| `contact_email` | `TEXT` | Nullable |
+| `contact_phone` | `TEXT` | Nullable |
 
 `(company_name, posting_id)` is unique so the engine can skip postings it already has.
 
-**Statuses:** `NEW`, `INTERESTED`, `APPLIED`, `INTERVIEWING`, `OFFER`, `USER_REJECTED`, `COMPANY_REJECTED`
+**Statuses:** `NEW`, `INTERESTED`, `APPLIED`, `INTERVIEWING`, `OFFER`, `USER_REJECTED`, `COMPANY_REJECTED`, `EXPIRED` (posting came down before I applied)
 
 ## Posting archive
 

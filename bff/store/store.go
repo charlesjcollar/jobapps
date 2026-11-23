@@ -17,7 +17,7 @@ import (
 var ErrDuplicate = errors.New("another job already has this company name and posting ID")
 
 // Statuses in workflow order. Must match the CHECK constraint in db/migrations.
-var Statuses = []string{"NEW", "INTERESTED", "APPLIED", "INTERVIEWING", "OFFER", "USER_REJECTED", "COMPANY_REJECTED"}
+var Statuses = []string{"NEW", "INTERESTED", "APPLIED", "INTERVIEWING", "OFFER", "USER_REJECTED", "COMPANY_REJECTED", "EXPIRED"}
 
 const dateLayout = "2006-01-02"
 
@@ -32,16 +32,21 @@ type Job struct {
 	Status        string
 	LastUpdated   time.Time
 	Notes         *string
+	ContactName   *string
+	ContactEmail  *string
+	ContactPhone  *string
 }
 
-const jobColumns = `id, company_name, job_title, posting_id, link, posted_date, retrieved_date, status, last_updated, notes`
+const jobColumns = `id, company_name, job_title, posting_id, link, posted_date, retrieved_date, status, last_updated, notes,
+	contact_name, contact_email, contact_phone`
 
 type scanner interface{ Scan(dest ...any) error }
 
 func scanJob(row scanner) (Job, error) {
 	var j Job
 	err := row.Scan(&j.ID, &j.CompanyName, &j.JobTitle, &j.PostingID, &j.Link,
-		&j.PostedDate, &j.RetrievedDate, &j.Status, &j.LastUpdated, &j.Notes)
+		&j.PostedDate, &j.RetrievedDate, &j.Status, &j.LastUpdated, &j.Notes,
+		&j.ContactName, &j.ContactEmail, &j.ContactPhone)
 	return j, err
 }
 
@@ -172,7 +177,8 @@ func escapeLike(s string) string {
 }
 
 // Update describes the changes to make to one job. Nil pointers are left unchanged.
-// For the nullable columns, Set* says whether to write the value (nil clears it).
+// For the nullable columns, Set* / a non-nil Nullable says whether to write the
+// value (a nil value clears it).
 type Update struct {
 	CompanyName *string
 	JobTitle    *string
@@ -182,9 +188,15 @@ type Update struct {
 
 	SetPostedDate bool
 	PostedDate    *time.Time
-	SetNotes      bool
-	Notes         *string
+
+	Notes        *Nullable
+	ContactName  *Nullable
+	ContactEmail *Nullable
+	ContactPhone *Nullable
 }
+
+// Nullable is a value for a nullable text column. Value nil writes NULL.
+type Nullable struct{ Value *string }
 
 // UpdateJob applies u to the job with the given id and returns the updated job,
 // or nil if there is no such job.
@@ -214,8 +226,18 @@ func (s *Store) UpdateJob(ctx context.Context, id int64, u Update) (*Job, error)
 	if u.SetPostedDate {
 		set("posted_date", formatDate(u.PostedDate))
 	}
-	if u.SetNotes {
-		set("notes", u.Notes)
+	for _, c := range []struct {
+		col string
+		v   *Nullable
+	}{
+		{"notes", u.Notes},
+		{"contact_name", u.ContactName},
+		{"contact_email", u.ContactEmail},
+		{"contact_phone", u.ContactPhone},
+	} {
+		if c.v != nil {
+			set(c.col, c.v.Value)
+		}
 	}
 
 	if len(sets) == 0 {
