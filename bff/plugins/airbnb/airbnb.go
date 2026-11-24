@@ -175,7 +175,7 @@ type Filter struct {
 func (f Filter) Check(j greenhouse.Job, text string) string {
 	title := strings.Join(strings.Fields(j.Title), " ")
 
-	if !hasAnyWordPrefix(title, f.TitlePrefixes) {
+	if jobtext.StartsWithAnyWordFold(title, f.TitlePrefixes...) == "" {
 		return "title doesn't start with an allowed title"
 	}
 	if bad := jobtext.ContainsAnyWordFold(title, f.TitleExcludes...); bad != "" {
@@ -226,23 +226,4 @@ func (f Filter) Check(j greenhouse.Job, text string) string {
 // normalize ignores case, spaces, hyphens and underscores: "On-site" == "onsite".
 func normalize(s string) string {
 	return strings.NewReplacer(" ", "", "-", "", "_", "").Replace(strings.ToLower(s))
-}
-
-// hasAnyWordPrefix reports whether title starts with one of prefixes (ignoring
-// case) as whole words: "Software Engineer, Payments" yes, "Software
-// Engineering Intern" no.
-func hasAnyWordPrefix(title string, prefixes []string) bool {
-	for _, pre := range prefixes {
-		if len(title) < len(pre) || !strings.EqualFold(title[:len(pre)], pre) {
-			continue
-		}
-		if len(title) == len(pre) {
-			return true
-		}
-		next := title[len(pre)]
-		if !(next >= 'a' && next <= 'z' || next >= 'A' && next <= 'Z') {
-			return true
-		}
-	}
-	return false
 }

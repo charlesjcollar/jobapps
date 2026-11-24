@@ -198,6 +198,9 @@ func (d *dryRunExpirer) print() {
 	case !d.called:
 		fmt.Println("Expiration check didn't run (see the log above).")
 		return
+	case len(d.saved) == 0:
+		fmt.Println("Would expire nothing: no saved New/Interested/Not pursuing postings for this company.")
+		return
 	case len(d.wouldExpire) == 0:
 		fmt.Printf("Would expire nothing: all %d saved New/Interested/Not pursuing postings are still listed.\n", len(d.saved))
 		return

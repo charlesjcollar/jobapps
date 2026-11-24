@@ -141,6 +141,21 @@ US. It then applies the title rules and the years-of-experience rule. If no post
 `Workplace Type` field at all, the run fails rather than quietly keeping nothing, since that means
 Airbnb renamed the field.
 
+### Alpaca
+
+Alpaca's careers page also lists postings from Greenhouse (board `alpaca`): one request, no detail
+fetches. Alpaca is remote-first and has no workplace-type field, so the plugin reads the free-text
+location ("Remote - Americas", "Global Anywhere", "Remote - Europe, Americas"):
+
+- The location or an office must say Remote or Anywhere.
+- The location must name North America, Americas, America, Global, Anywhere, United States, USA or
+  US. "South America" doesn't count as "America". If the location is just "Remote", the offices
+  decide.
+- Titles tied to another country or region (Canada, APAC, EMEA, Europe, Japan, Singapore, ...) are
+  dropped unless they also name an allowed region ("US or Canada").
+- Title rules are the same as the other plugins, plus Alpaca's "Full-Stack" spelling, "Product
+  Engineer" titles, and excluding "Quality" (quality-engineering roles).
+
 ## Subscriptions over SSE
 
 `POST /graphql/stream` takes a normal GraphQL request body containing a subscription and responds

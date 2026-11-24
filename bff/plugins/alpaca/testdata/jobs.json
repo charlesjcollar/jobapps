@@ -1,0 +1,51 @@
+{
+  "jobs": [
+    {
+      "id": 7000001, "title": "Senior Full-Stack Engineer - Example Tools ",
+      "absolute_url": "https://job-boards.greenhouse.io/alpaca/jobs/7000001",
+      "location": {"name": "Remote - North America - South America - Europe"},
+      "metadata": null,
+      "offices": [{"id": 1, "name": "Remote - North America ", "location": null}],
+      "first_published": "2026-11-02T10:00:00-04:00",
+      "content": "&lt;p&gt;Who You Are:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;5+ years of experience building made-up apps.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Home-Office Setup: One-time USD $500 Monthly Stipend: USD $150 per month&lt;/p&gt;"
+    },
+    {
+      "id": 7000002, "title": "Senior Software Engineer - Sample Ledger",
+      "absolute_url": "https://job-boards.greenhouse.io/alpaca/jobs/7000002",
+      "location": {"name": "Global Anywhere"},
+      "metadata": null,
+      "offices": [{"id": 2, "name": "Remote - Global - Anywhere", "location": null}],
+      "first_published": "2026-10-01T10:00:00-04:00",
+      "content": "&lt;p&gt;Pay: $150,000 - $180,000&lt;/p&gt;"
+    },
+    {
+      "id": 7000003, "title": "Senior Software Engineer - Europe Team",
+      "location": {"name": "Remote - Europe"},
+      "metadata": null,
+      "offices": [{"id": 3, "name": "Remote - EU", "location": null}],
+      "content": ""
+    },
+    {
+      "id": 7000004, "title": "Senior Software Engineer - Example",
+      "location": {"name": "Remote - South America"},
+      "metadata": null,
+      "offices": [{"id": 4, "name": "Remote - South America", "location": null}],
+      "content": ""
+    },
+    {
+      "id": 7000005, "title": "Staff Software Engineer - Example",
+      "location": {"name": "Remote - Americas"},
+      "metadata": null,
+      "offices": [],
+      "content": ""
+    },
+    {
+      "id": 7000006, "title": "Senior Software Engineer - Lots Of Experience",
+      "location": {"name": "Remote - Americas"},
+      "metadata": null,
+      "offices": [],
+      "content": "&lt;ul&gt;&lt;li&gt;8+ years of professional experience&lt;/li&gt;&lt;/ul&gt;"
+    }
+  ],
+  "meta": {"total": 6}
+}

@@ -225,12 +225,7 @@ type Filter struct {
 func (f Filter) CheckListing(p eightfold.Position) string {
 	title := strings.TrimSpace(p.Name)
 
-	prefix := ""
-	for _, pre := range f.TitlePrefixes {
-		if hasWordPrefix(title, pre) && len(pre) > len(prefix) {
-			prefix = pre
-		}
-	}
+	prefix := jobtext.StartsWithAnyWordFold(title, f.TitlePrefixes...)
 	if prefix == "" {
 		return "title doesn't start with an allowed title"
 	}
@@ -311,19 +306,6 @@ func (f Filter) excludedWorkType(labels ...string) string {
 
 func normalizeWorkType(s string) string {
 	return strings.NewReplacer(" ", "", "-", "", "_", "").Replace(strings.ToLower(s))
-}
-
-// hasWordPrefix reports whether title starts with prefix (ignoring case) as a
-// whole word: "Software Engineer 5" yes, "Software Engineering Manager" no.
-func hasWordPrefix(title, prefix string) bool {
-	if len(title) < len(prefix) || !strings.EqualFold(title[:len(prefix)], prefix) {
-		return false
-	}
-	if len(title) == len(prefix) {
-		return true
-	}
-	next := title[len(prefix)]
-	return !(next >= 'a' && next <= 'z' || next >= 'A' && next <= 'Z')
 }
 
 var (

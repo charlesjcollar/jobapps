@@ -71,3 +71,22 @@ func TestSalaryRange(t *testing.T) {
 		}
 	}
 }
+
+func TestStartsWithAnyWordFold(t *testing.T) {
+	prefixes := []string{"Software Engineer", "Senior Software Engineer", "Software Engineering"}
+	cases := map[string]string{
+		"Software Engineer, Payments":         "Software Engineer",
+		"software engineer 5":                 "Software Engineer",
+		"Software Engineer":                   "Software Engineer",
+		"Senior Software Engineer – Platform": "Senior Software Engineer",
+		"Software Engineering L5":             "Software Engineering",
+		"Software Engineers Wanted":           "",
+		"Staff Software Engineer":             "",
+		"":                                    "",
+	}
+	for title, want := range cases {
+		if got := StartsWithAnyWordFold(title, prefixes...); got != want {
+			t.Errorf("%q: got %q, want %q", title, got, want)
+		}
+	}
+}
