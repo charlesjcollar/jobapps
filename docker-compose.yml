@@ -43,8 +43,10 @@ services:
     build: ./bff
     environment:
       DATABASE_URL: postgres://jobapps:jobapps@db:5432/jobapps?sslmode=disable
-      # Fake scan plugins for trying the scan UI. They save nothing. Remove once real plugins exist.
-      DEMO_PLUGINS: "true"
+      # How many company plugins run at once during a scan (default 8).
+      # SCAN_CONCURRENCY: "8"
+      # Set to "true" to add fake plugins for trying the scan UI (they save nothing).
+      # DEMO_PLUGINS: "true"
     ports:
       - "8080:8080"
     depends_on:

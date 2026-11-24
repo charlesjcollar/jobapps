@@ -260,3 +260,65 @@ func TestNoPlugins(t *testing.T) {
 		t.Error("Current should be nil")
 	}
 }
+
+// partialPlugin returns some jobs along with an error.
+type partialPlugin struct{}
+
+func (partialPlugin) Name() string { return "partial" }
+func (partialPlugin) Scan(context.Context) ([]store.NewJob, error) {
+	return []store.NewJob{job("P", "1"), job("P", "2")}, errors.New("page 3 failed")
+}
+
+func TestPartialResultsAreSaved(t *testing.T) {
+	saver := &fakeSaver{}
+	m := NewManager([]Plugin{partialPlugin{}}, saver, Options{})
+	r := runToEnd(t, m).Runs[0]
+	if r.Status != Failed || r.JobsFound != 2 || r.JobsAdded != 2 || !strings.Contains(r.Error, "page 3 failed") {
+		t.Fatalf("got %+v", r)
+	}
+	if len(saver.seen) != 2 {
+		t.Errorf("saved %d jobs, want 2", len(saver.seen))
+	}
+}
+
+// slowCustomTimeout needs longer than the default timeout and says so.
+type slowCustomTimeout struct{ fakePlugin }
+
+func (slowCustomTimeout) Timeout() time.Duration { return time.Second }
+
+// loggingPlugin checks that a logger is available in ctx.
+type loggingPlugin struct{ got *bool }
+
+func (loggingPlugin) Name() string { return "logs" }
+func (p loggingPlugin) Scan(ctx context.Context) ([]store.NewJob, error) {
+	*p.got = Logger(ctx) != nil
+	return nil, nil
+}
+
+func TestPluginTimeoutOverride(t *testing.T) {
+	m := NewManager([]Plugin{
+		slowCustomTimeout{fakePlugin{name: "custom", delay: 100 * time.Millisecond}},
+		fakePlugin{name: "default", delay: 100 * time.Millisecond},
+	}, &fakeSaver{}, Options{PluginTimeout: 20 * time.Millisecond})
+	final := runToEnd(t, m)
+	for _, r := range final.Runs {
+		switch r.Name {
+		case "custom":
+			if r.Status != Succeeded {
+				t.Errorf("custom-timeout plugin: %+v", r)
+			}
+		case "default":
+			if r.Status != Failed || !strings.Contains(r.Error, "timed out after 20ms") {
+				t.Errorf("default-timeout plugin: %+v", r)
+			}
+		}
+	}
+}
+
+func TestLoggerInContext(t *testing.T) {
+	var got bool
+	runToEnd(t, NewManager([]Plugin{loggingPlugin{&got}}, &fakeSaver{}, Options{}))
+	if !got {
+		t.Error("no logger in plugin context")
+	}
+}

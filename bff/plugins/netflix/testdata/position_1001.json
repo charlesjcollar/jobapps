@@ -1,0 +1,26 @@
+{
+ "id": 1001,
+ "name": "Software Engineer 5 - Example Platform",
+ "posting_name": "Software Engineer 5 - Example Platform",
+ "location": "Los Gatos,California,United States of America",
+ "locations": [
+  "Los Gatos,California,United States of America"
+ ],
+ "department": "Engineering",
+ "t_create": 1795046400,
+ "display_job_id": "JR1001",
+ "ats_job_id": "JR1001",
+ "work_location_option": "remote_local",
+ "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1001",
+ "job_description": "<p>Build example things.</p><ul><li>5+ years of experience with Java</li></ul><p>The range for this role is $300,000 - $500,000.</p>",
+ "custom_JD": {
+  "data_fields": {
+   "work_type": [
+    "Remote"
+   ],
+   "posting_date": [
+    "11-19-2026"
+   ]
+  }
+ }
+}

@@ -11,10 +11,9 @@ Personal app for managing job postings I may apply to. Three parts:
 3. `bff/` — Go GraphQL API. Also runs scans: one plugin per company (`bff/plugins/`), orchestrated
    by `bff/scan/`, with progress streamed to the frontend over SSE.
 
-Jobs enter the database only through scans. There is one scan plugin per company, and I pick the
-companies by hand (based on culture, ethics, etc.). Plugins for companies on the same job-board system
-(Greenhouse, Lever, Workday, ...) share code from a common package under `bff/plugins/`. Scan history
-is in memory only, by design.
+Jobs enter the database only through scans. There is one scan plugin per company (folder
+`bff/plugins/<company>/`), and I pick the companies by hand (based on culture, ethics, etc.). Expect
+dozens, eventually hundreds. Scan history is in memory only, by design.
 
 Each posting also has a folder at `db/<company_name>/<posting_id>/` holding the saved posting page and the resume/cover letter submitted (personal documents, gitignored). See `db/README.md`.
 
@@ -48,5 +47,16 @@ See `README.md` and each folder's `README.md` for details.
 <!-- Go-specific preferences -->
 
 ## Scan plugins
+
+- Removing a plugin must stay "delete its folder". Nothing outside the folder may reference a specific
+  company; `plugins/all/all_gen.go` is generated (`go run ./plugins/internal/gen`).
+- Each plugin's filters live in a `Criteria` value at the top of its main file, so they're easy to edit.
+- Code shared by companies on the same job-board system goes in `bff/plugins/shared/<system>/`.
+- All HTTP goes through `plugins/shared/web` (per-host pacing, retries, 429 backoff). Respect sites'
+  rate limits: never work around them (e.g. by mimicking browser sessions).
+- Plugins fail cleanly: return partial results with a descriptive error (URL, status, what step),
+  log rejections at Debug with the reason, and never panic on unexpected responses.
+- Tests use `httptest` with made-up fixtures in `testdata/`, never live sites or real postings.
+- Debug a plugin with `go run ./cmd/plugin -v <id>` (no database).
 
 <!-- Plugin-specific preferences -->

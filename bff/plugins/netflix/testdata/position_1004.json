@@ -1,0 +1,26 @@
+{
+ "id": 1004,
+ "name": "Software Engineer 5 - Fake Ads",
+ "posting_name": "Software Engineer 5 - Fake Ads",
+ "location": "Los Gatos,California,United States of America",
+ "locations": [
+  "Los Gatos,California,United States of America"
+ ],
+ "department": "Engineering",
+ "t_create": 1795046400,
+ "display_job_id": "JR1004",
+ "ats_job_id": "JR1004",
+ "work_location_option": "remote_local",
+ "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1004",
+ "job_description": "<p>You have 8+ years of backend experience.</p>",
+ "custom_JD": {
+  "data_fields": {
+   "work_type": [
+    "Remote"
+   ],
+   "posting_date": [
+    "11-19-2026"
+   ]
+  }
+ }
+}

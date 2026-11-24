@@ -1,4 +1,4 @@
-import type { Job, JobSort, JobUpdate, Scan } from "./types";
+import type { Job, JobFilter, JobSort, JobUpdate, Scan } from "./types";
 
 const JOB_FIELDS = `
   id companyName jobTitle postingId link postedDate retrievedDate
@@ -26,12 +26,12 @@ export interface JobPage {
   totalCount: number;
 }
 
-export async function listJobs(sort: JobSort, limit: number, offset: number): Promise<JobPage> {
+export async function listJobs(filter: JobFilter, sort: JobSort, limit: number, offset: number): Promise<JobPage> {
   const data = await gql<{ jobs: JobPage }>(
-    `query($sort: JobSort, $limit: Int, $offset: Int) {
-      jobs(sort: $sort, limit: $limit, offset: $offset) { totalCount items { ${JOB_FIELDS} } }
+    `query($filter: JobFilter, $sort: JobSort, $limit: Int, $offset: Int) {
+      jobs(filter: $filter, sort: $sort, limit: $limit, offset: $offset) { totalCount items { ${JOB_FIELDS} } }
     }`,
-    { sort, limit, offset },
+    { filter, sort, limit, offset },
   );
   return data.jobs;
 }

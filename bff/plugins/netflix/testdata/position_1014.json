@@ -1,0 +1,26 @@
+{
+ "id": 1014,
+ "name": "Software Engineer 5 - Demo Studio Tools",
+ "posting_name": "Software Engineer 5 - Demo Studio Tools",
+ "location": "Los Gatos,California,United States of America",
+ "locations": [
+  "Los Gatos,California,United States of America"
+ ],
+ "department": "Engineering",
+ "t_create": 1795046400,
+ "display_job_id": "JR1014",
+ "ats_job_id": "JR1014",
+ "work_location_option": "remote_local",
+ "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1014",
+ "job_description": "<p>4+ years of experience.</p>",
+ "custom_JD": {
+  "data_fields": {
+   "work_type": [
+    "Onsite"
+   ],
+   "posting_date": [
+    "11-19-2026"
+   ]
+  }
+ }
+}

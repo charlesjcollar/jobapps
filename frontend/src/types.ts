@@ -81,3 +81,14 @@ export interface Scan {
   running: boolean;
   plugins: PluginRun[];
 }
+
+/** Narrows the jobs list. Omitted fields don't filter; set fields are combined with AND. */
+export interface JobFilter {
+  /** Only these statuses. An empty list matches nothing, so omit it instead. */
+  statuses?: JobStatus[];
+  excludedStatuses?: JobStatus[];
+  /** Case-insensitive substring. */
+  companyName?: string;
+  /** Case-insensitive substring. */
+  jobTitle?: string;
+}

@@ -1,0 +1,26 @@
+{
+ "id": 1015,
+ "name": "Software Engineer 5 - Demo Mislabeled Remote",
+ "posting_name": "Software Engineer 5 - Demo Mislabeled Remote",
+ "location": "Remote, United States",
+ "locations": [
+  "Remote, United States"
+ ],
+ "department": "Engineering",
+ "t_create": 1795046400,
+ "display_job_id": "JR1015",
+ "ats_job_id": "JR1015",
+ "work_location_option": null,
+ "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1015",
+ "job_description": "<p>5+ years of experience.</p>",
+ "custom_JD": {
+  "data_fields": {
+   "work_type": [
+    "Remote"
+   ],
+   "posting_date": [
+    "11-19-2026"
+   ]
+  }
+ }
+}

@@ -10,7 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -24,9 +24,34 @@ import (
 type Plugin interface {
 	// Name identifies the plugin in the UI, usually the company name.
 	Name() string
-	// Scan returns every current posting it can find. Postings that are already
-	// saved are filtered out afterwards, so plugins don't need to track that.
+	// Scan returns the postings that pass the plugin's filters. Postings that
+	// are already saved are skipped afterwards, so plugins don't track that.
+	//
+	// On failure, Scan may return the postings it got before the error along
+	// with the error: those are still saved, and the run is marked failed.
+	// Use Logger(ctx) for logging.
 	Scan(ctx context.Context) ([]store.NewJob, error)
+}
+
+// TimeoutPlugin is implemented by plugins that need more (or less) time than
+// Options.PluginTimeout, e.g. because the site rate-limits heavily.
+type TimeoutPlugin interface {
+	Timeout() time.Duration
+}
+
+type loggerKey struct{}
+
+// WithLogger returns a context carrying l, for Logger to retrieve.
+func WithLogger(ctx context.Context, l *slog.Logger) context.Context {
+	return context.WithValue(ctx, loggerKey{}, l)
+}
+
+// Logger returns the plugin's logger from ctx, or slog.Default().
+func Logger(ctx context.Context) *slog.Logger {
+	if l, ok := ctx.Value(loggerKey{}).(*slog.Logger); ok {
+		return l
+	}
+	return slog.Default()
 }
 
 // Saver stores newly found jobs, skipping ones already saved.
@@ -65,9 +90,10 @@ type Snapshot struct {
 func (s Snapshot) Running() bool { return s.FinishedAt == nil }
 
 type Options struct {
-	// Concurrency is how many plugins run at once. Default 4.
+	// Concurrency is how many plugins run at once. Default 8.
 	Concurrency int
-	// PluginTimeout bounds each plugin's Scan call. Default 2 minutes.
+	// PluginTimeout bounds each plugin's Scan call unless the plugin
+	// implements TimeoutPlugin. Default 2 minutes.
 	PluginTimeout time.Duration
 }
 
@@ -84,7 +110,7 @@ type Manager struct {
 
 func NewManager(plugins []Plugin, saver Saver, opts Options) *Manager {
 	if opts.Concurrency <= 0 {
-		opts.Concurrency = 4
+		opts.Concurrency = 8
 	}
 	if opts.PluginTimeout <= 0 {
 		opts.PluginTimeout = 2 * time.Minute
@@ -177,7 +203,8 @@ func (m *Manager) runPlugin(s *scan, i int, p Plugin) {
 		r.StartedAt = &now
 	})
 
-	found, added, err := m.scanAndSave(p)
+	logger := slog.Default().With("scan", s.id, "plugin", p.Name())
+	found, added, err := m.scanAndSave(logger, p)
 
 	s.update(i, func(r *Run) {
 		now := time.Now()
@@ -187,36 +214,40 @@ func (m *Manager) runPlugin(s *scan, i int, p Plugin) {
 		if err != nil {
 			r.Status = Failed
 			r.Error = err.Error()
-			log.Printf("scan %s: plugin %q failed: %v", s.id, p.Name(), err)
+			logger.Error("plugin failed", "err", err, "found", found, "added", added)
 		} else {
 			r.Status = Succeeded
+			logger.Info("plugin finished", "found", found, "added", added)
 		}
 	})
 }
 
-func (m *Manager) scanAndSave(p Plugin) (found, added int, err error) {
-	jobs, err := m.callPlugin(p)
-	if err != nil {
-		return 0, 0, err
-	}
+// scanAndSave runs p and saves what it returns, including partial results
+// returned alongside an error.
+func (m *Manager) scanAndSave(logger *slog.Logger, p Plugin) (found, added int, err error) {
+	jobs, scanErr := m.callPlugin(logger, p)
 	if err := validate(jobs); err != nil {
-		return len(jobs), 0, err
+		return len(jobs), 0, errors.Join(scanErr, err)
 	}
 	if len(jobs) == 0 {
-		return 0, 0, nil
+		return 0, 0, scanErr
 	}
 
 	inserted, err := m.saver.InsertNew(context.Background(), jobs)
 	if err != nil {
-		return len(jobs), 0, fmt.Errorf("saving jobs: %w", err)
+		return len(jobs), 0, errors.Join(scanErr, fmt.Errorf("saving jobs: %w", err))
 	}
-	return len(jobs), len(inserted), nil
+	return len(jobs), len(inserted), scanErr
 }
 
 // callPlugin runs p.Scan with a timeout, turning panics into errors. The call
 // runs in its own goroutine so the timeout holds even if the plugin ignores ctx.
-func (m *Manager) callPlugin(p Plugin) ([]store.NewJob, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), m.opts.PluginTimeout)
+func (m *Manager) callPlugin(logger *slog.Logger, p Plugin) ([]store.NewJob, error) {
+	limit := m.opts.PluginTimeout
+	if tp, ok := p.(TimeoutPlugin); ok && tp.Timeout() > 0 {
+		limit = tp.Timeout()
+	}
+	ctx, cancel := context.WithTimeout(WithLogger(context.Background(), logger), limit)
 	defer cancel()
 
 	type result struct {
@@ -227,7 +258,7 @@ func (m *Manager) callPlugin(p Plugin) ([]store.NewJob, error) {
 	go func() {
 		defer func() {
 			if rec := recover(); rec != nil {
-				log.Printf("plugin %q panicked: %v\n%s", p.Name(), rec, debug.Stack())
+				logger.Error("plugin panicked", "panic", rec, "stack", string(debug.Stack()))
 				done <- result{err: fmt.Errorf("panic: %v", rec)}
 			}
 		}()
@@ -235,11 +266,11 @@ func (m *Manager) callPlugin(p Plugin) ([]store.NewJob, error) {
 		done <- result{jobs, err}
 	}()
 
-	timeout := fmt.Errorf("timed out after %s", m.opts.PluginTimeout)
+	timeout := fmt.Errorf("timed out after %s", limit)
 	select {
 	case r := <-done:
 		if errors.Is(r.err, context.DeadlineExceeded) {
-			return nil, timeout
+			return r.jobs, timeout // keep anything found before the deadline
 		}
 		return r.jobs, r.err
 	case <-ctx.Done():

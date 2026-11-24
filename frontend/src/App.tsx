@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listJobs, type JobPage } from "./api";
-import type { Job, JobSort } from "./types";
+import { isFiltered, loadFilters, NO_FILTERS, saveFilters, toJobFilter, type Filters } from "./filters";
+import type { Job, JobFilter, JobSort } from "./types";
+import FilterBar from "./components/FilterBar";
 import JobsTable from "./components/JobsTable";
 import Pagination from "./components/Pagination";
 import ScanModal from "./components/ScanModal";
@@ -9,6 +11,9 @@ import { useScan } from "./useScan";
 
 const PAGE_SIZE = 50;
 const DEFAULT_SORT: JobSort = { field: "RETRIEVED_DATE", direction: "DESC" };
+const TYPING_DELAY_MS = 300;
+
+const filterKey = (f: Filters) => JSON.stringify(toJobFilter(f));
 
 export default function App() {
   const [sort, setSort] = useState<JobSort>(DEFAULT_SORT);
@@ -18,6 +23,43 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
+  // `filters` is what the filter bar shows; `appliedFilter` (a serialized JobFilter) is what the
+  // table was queried with. Typing is debounced; other filter changes apply immediately.
+  const [filters, setFilters] = useState<Filters>(loadFilters);
+  const [appliedFilter, setAppliedFilter] = useState(() => filterKey(filters));
+  const [dataFiltered, setDataFiltered] = useState(false); // whether `data` came from a filtered query
+  const appliedRef = useRef(appliedFilter);
+  const typingTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(typingTimer.current), []);
+
+  const applyFilters = (f: Filters) => {
+    window.clearTimeout(typingTimer.current);
+    const key = filterKey(f);
+    if (key === appliedRef.current) return;
+    appliedRef.current = key;
+    setAppliedFilter(key);
+    setPage(0);
+  };
+
+  const changeFilters = (f: Filters) => {
+    const typed = f.company !== filters.company || f.title !== filters.title;
+    setFilters(f);
+    saveFilters(f);
+    if (typed) {
+      window.clearTimeout(typingTimer.current);
+      typingTimer.current = window.setTimeout(() => applyFilters(f), TYPING_DELAY_MS);
+    } else {
+      applyFilters(f);
+    }
+  };
+
+  const clearFilters = () => {
+    setFilters(NO_FILTERS);
+    saveFilters(NO_FILTERS);
+    applyFilters(NO_FILTERS);
+  };
+
   // Reload the table when a scan finishes, since it may have added jobs.
   const scan = useScan(useCallback(() => setReloadKey((k) => k + 1), []));
   const scanning = scan.scan?.running ?? false;
@@ -26,10 +68,12 @@ export default function App() {
   useEffect(() => {
     let stale = false;
     setLoading(true);
-    listJobs(sort, PAGE_SIZE, page * PAGE_SIZE)
+    const filter = JSON.parse(appliedFilter) as JobFilter;
+    listJobs(filter, sort, PAGE_SIZE, page * PAGE_SIZE)
       .then((d) => {
         if (stale) return;
         setData(d);
+        setDataFiltered(Object.keys(filter).length > 0);
         setError(null);
       })
       .catch((err) => {
@@ -41,7 +85,7 @@ export default function App() {
     return () => {
       stale = true;
     };
-  }, [sort, page, reloadKey]);
+  }, [appliedFilter, sort, page, reloadKey]);
 
   const changeSort = (s: JobSort) => {
     setSort(s);
@@ -72,8 +116,21 @@ export default function App() {
 
       {!data && loading && <p className="muted">Loading…</p>}
 
-      {data && data.totalCount === 0 && (
+      {data && (data.totalCount > 0 || dataFiltered || isFiltered(filters)) && (
+        <FilterBar filters={filters} onChange={changeFilters} onClear={clearFilters} />
+      )}
+
+      {data && data.totalCount === 0 && !dataFiltered && (
         <p className="empty muted">No jobs yet. Click “Rescan job postings” to look for new ones.</p>
+      )}
+
+      {data && data.totalCount === 0 && dataFiltered && (
+        <p className="empty muted">
+          No jobs match these filters.{" "}
+          <button className="link-button" onClick={clearFilters}>
+            Clear filters
+          </button>
+        </p>
       )}
 
       {data && data.totalCount > 0 && (

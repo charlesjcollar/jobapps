@@ -1,0 +1,26 @@
+{
+ "id": 1003,
+ "name": "Full Stack Software Engineer (4/5), Demo Games",
+ "posting_name": "Full Stack Software Engineer (4/5), Demo Games",
+ "location": "Los Gatos,California,United States of America",
+ "locations": [
+  "Los Gatos,California,United States of America"
+ ],
+ "department": "Engineering",
+ "t_create": 1795046400,
+ "display_job_id": "JR1003",
+ "ats_job_id": "JR1003",
+ "work_location_option": "remote_local",
+ "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1003",
+ "job_description": "<p>3-5 years of experience. Pay: $200k\u2013$300k</p>",
+ "custom_JD": {
+  "data_fields": {
+   "work_type": [
+    "Remote"
+   ],
+   "posting_date": [
+    "11-19-2026"
+   ]
+  }
+ }
+}

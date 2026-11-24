@@ -1,0 +1,26 @@
+{
+ "id": 1002,
+ "name": "Senior Software Engineer (L5), Sample Tools",
+ "posting_name": "Senior Software Engineer (L5), Sample Tools",
+ "location": "Remote, United States",
+ "locations": [
+  "Remote, United States"
+ ],
+ "department": "Engineering",
+ "t_create": 1795046400,
+ "display_job_id": "JR1002",
+ "ats_job_id": "JR1002",
+ "work_location_option": "remote_local",
+ "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1002",
+ "job_description": "<p>Deep experience with distributed systems.</p>",
+ "custom_JD": {
+  "data_fields": {
+   "work_type": [
+    "Remote"
+   ],
+   "posting_date": [
+    "11-19-2026"
+   ]
+  }
+ }
+}

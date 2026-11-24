@@ -1,0 +1,242 @@
+[
+ {
+  "id": 1001,
+  "name": "Software Engineer 5 - Example Platform",
+  "posting_name": "Software Engineer 5 - Example Platform",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1001",
+  "ats_job_id": "JR1001",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1001",
+  "job_description": ""
+ },
+ {
+  "id": 1002,
+  "name": "Senior Software Engineer (L5), Sample Tools",
+  "posting_name": "Senior Software Engineer (L5), Sample Tools",
+  "location": "Remote, United States",
+  "locations": [
+   "Remote, United States"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1002",
+  "ats_job_id": "JR1002",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1002",
+  "job_description": ""
+ },
+ {
+  "id": 1003,
+  "name": "Full Stack Software Engineer (4/5), Demo Games",
+  "posting_name": "Full Stack Software Engineer (4/5), Demo Games",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1003",
+  "ats_job_id": "JR1003",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1003",
+  "job_description": ""
+ },
+ {
+  "id": 1004,
+  "name": "Software Engineer 5 - Fake Ads",
+  "posting_name": "Software Engineer 5 - Fake Ads",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1004",
+  "ats_job_id": "JR1004",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1004",
+  "job_description": ""
+ },
+ {
+  "id": 1005,
+  "name": "Software Engineer 5 - Placeholder",
+  "posting_name": "Software Engineer 5 - Placeholder",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1005",
+  "ats_job_id": "JR1005",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1005",
+  "job_description": ""
+ },
+ {
+  "id": 1006,
+  "name": "Software Engineer 6 - Example Infra",
+  "posting_name": "Software Engineer 6 - Example Infra",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1006",
+  "ats_job_id": "JR1006",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1006",
+  "job_description": ""
+ },
+ {
+  "id": 1007,
+  "name": "Software Engineer in Test 5 - Sample Player",
+  "posting_name": "Software Engineer in Test 5 - Sample Player",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1007",
+  "ats_job_id": "JR1007",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1007",
+  "job_description": ""
+ },
+ {
+  "id": 1008,
+  "name": "Staff Software Engineer, Demo",
+  "posting_name": "Staff Software Engineer, Demo",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1008",
+  "ats_job_id": "JR1008",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1008",
+  "job_description": ""
+ },
+ {
+  "id": 1009,
+  "name": "Software Engineer 5",
+  "posting_name": "Software Engineer 5",
+  "location": "Tartu,Estonia",
+  "locations": [
+   "Tartu,Estonia"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1009",
+  "ats_job_id": "JR1009",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1009",
+  "job_description": ""
+ },
+ {
+  "id": 1010,
+  "name": "Software Engineer 5 - Example Hybrid Team",
+  "posting_name": "Software Engineer 5 - Example Hybrid Team",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1010",
+  "ats_job_id": "JR1010",
+  "work_location_option": "hybrid",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1010",
+  "job_description": ""
+ },
+ {
+  "id": 1011,
+  "name": "Data Engineer 5 - Sample Data",
+  "posting_name": "Data Engineer 5 - Sample Data",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1011",
+  "ats_job_id": "JR1011",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1011",
+  "job_description": ""
+ },
+ {
+  "id": 1012,
+  "name": "Software Engineering Manager - Demo",
+  "posting_name": "Software Engineering Manager - Demo",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1012",
+  "ats_job_id": "JR1012",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1012",
+  "job_description": ""
+ },
+ {
+  "id": 1013,
+  "name": "Software Engineer 4 - Sample Office Team",
+  "posting_name": "Software Engineer 4 - Sample Office Team",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1013",
+  "ats_job_id": "JR1013",
+  "work_location_option": "onsite",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1013",
+  "job_description": ""
+ },
+ {
+  "id": 1014,
+  "name": "Software Engineer 5 - Demo Studio Tools",
+  "posting_name": "Software Engineer 5 - Demo Studio Tools",
+  "location": "Los Gatos,California,United States of America",
+  "locations": [
+   "Los Gatos,California,United States of America"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1014",
+  "ats_job_id": "JR1014",
+  "work_location_option": "remote_local",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1014",
+  "job_description": ""
+ },
+ {
+  "id": 1015,
+  "name": "Software Engineer 5 - Demo Mislabeled Remote",
+  "posting_name": "Software Engineer 5 - Demo Mislabeled Remote",
+  "location": "Remote, United States",
+  "locations": [
+   "Remote, United States"
+  ],
+  "department": "Engineering",
+  "t_create": 1795046400,
+  "display_job_id": "JR1015",
+  "ats_job_id": "JR1015",
+  "work_location_option": "onsite",
+  "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/1015",
+  "job_description": ""
+ }
+]

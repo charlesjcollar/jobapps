@@ -13,15 +13,18 @@ The schema is in [`graph/schema.graphqls`](graph/schema.graphqls).
 
 ## Scans
 
-`startScan` runs every plugin in [`plugins/`](plugins/) in the background and returns right away
-with the list of plugins it will run. Each plugin scans one company's job board and returns the
-postings it finds. The orchestrator ([`scan/`](scan/)):
+`startScan` runs every registered plugin in the background and returns right away with the list of
+plugins it will run. Each plugin scans one company's job board and returns the postings that pass
+its filters. The orchestrator ([`scan/`](scan/)):
 
-- runs up to 4 plugins at a time, each with a 2-minute timeout
-- records each plugin as failed if it returns an error, panics, times out, or returns a posting
-  with an empty required field. The rest keep running
+- runs up to 8 plugins at a time (`SCAN_CONCURRENCY`), each with a 2-minute timeout unless the
+  plugin asks for more (`Timeout()`)
+- records a plugin as failed if it returns an error, panics, times out, or returns a posting with
+  an empty required field. The rest keep running
+- saves partial results: a plugin that fails partway can return what it found before the error,
+  and those postings are still saved
 - saves only postings whose `(company name, posting ID)` isn't already in the database, so plugins
-  can return every posting they see
+  can return every match they see
 - runs one scan at a time: `startScan` during a scan returns the running scan
 
 Progress is delivered by the `scanUpdated(id)` subscription, which sends the whole scan state
@@ -29,25 +32,75 @@ immediately and again whenever a plugin starts or finishes, then completes.
 
 Scan state lives in memory only. Restarting the bff forgets past scans and stops one in progress.
 
-### Writing a plugin
+## Plugins
 
-There is one plugin per company, and the companies are chosen by hand. Many companies host their
-job board on the same system (Greenhouse, Lever, Workday, ...), so code for a given system should
-live in a shared package under `plugins/` that each company's plugin builds on.
-
-Implement `scan.Plugin` and add it to `All()` in [`plugins/plugins.go`](plugins/plugins.go):
-
-```go
-type Plugin interface {
-    Name() string                                     // shown in the UI, usually the company name
-    Scan(ctx context.Context) ([]store.NewJob, error) // every current posting
-}
+```
+plugins/
+  registry.go          Register / All / Get
+  all/all_gen.go       generated: imports every company folder
+  internal/gen/        the generator
+  shared/              code shared between companies (not plugins themselves)
+    web/               polite HTTP client: per-host pacing, retries, backoff on 429
+    eightfold/         client for career sites hosted on Eightfold
+    jobtext/           HTML to text, years-of-experience and salary parsing
+  netflix/             one folder per company
+    netflix.go         Criteria (the filters) at the top, then the scan
+    netflix_test.go
+    testdata/          made-up API responses for tests
+  demo/                fake plugins, only registered when DEMO_PLUGINS=true
 ```
 
-Respect `ctx` (it carries the timeout). Errors are shown in the UI as-is, so make them descriptive.
+### Running one plugin (debugging)
 
-`DEMO_PLUGINS=true` adds five fake plugins (one always fails) for trying the UI. They save nothing.
-It's on in `docker-compose.yml` until real plugins exist.
+`cmd/plugin` runs a single plugin against the live site and prints what it keeps. It doesn't touch
+the database.
+
+```sh
+go run ./cmd/plugin                # list plugins
+go run ./cmd/plugin netflix        # run it; print kept postings
+go run ./cmd/plugin -v netflix     # also log each rejected posting with the reason, and each request
+go run ./cmd/plugin -json netflix  # JSON output
+```
+
+### Changing a plugin's filters
+
+Each plugin keeps its filters in a `Criteria` value at the top of its main file (e.g.
+`netflix/netflix.go`). Edit it, check with `go run ./cmd/plugin -v <id>`, then rebuild.
+
+### Adding a plugin
+
+1. Create `plugins/<company>/` with a type implementing `scan.Plugin`:
+
+   ```go
+   type Plugin interface {
+       Name() string                                     // shown in the UI
+       Scan(ctx context.Context) ([]store.NewJob, error) // postings that pass the filters
+   }
+   ```
+
+   Register it from `init()`: `plugins.Register("<company>", New(...))`. Implement
+   `Timeout() time.Duration` too if it needs longer than 2 minutes.
+2. Use `shared/web` for HTTP so requests are paced and retried. If the company's job board runs on
+   a system another plugin already uses, build on that client in `shared/`. Otherwise add one there.
+3. Log with `scan.Logger(ctx)`: `Debug` for each rejected posting and its reason, `Warn` for
+   problems that don't stop the scan. Return errors that say what failed and where (URL, status),
+   since they're shown in the UI.
+4. Write tests against an `httptest` server serving made-up responses in `testdata/`.
+5. Regenerate the import list: `go run ./plugins/internal/gen` (the Docker build does this too).
+
+### Removing a plugin
+
+Delete its folder. `docker compose up -d --build` regenerates the import list. To run Go locally
+afterwards, run `go run ./plugins/internal/gen` first; until then the build fails with
+`package jobapps/bff/plugins/<company> is not in std`.
+
+### Netflix
+
+Netflix's careers site is on Eightfold. The plugin searches for "Software Engineer", applies the
+title, level, country and work-arrangement (no hybrid or on-site) checks to the search results, and then fetches the full posting
+only for the jobs that pass, to check years of experience and read the salary range. The site
+rate-limits after a couple of quick requests, so the plugin waits 3 seconds between requests, backs
+off for 20 seconds or more on a 429, and allows itself 15 minutes.
 
 ## Subscriptions over SSE
 
@@ -76,7 +129,8 @@ graph/scan.go          Scan query/mutation/subscription
 graph/stream.go        Subscriptions over SSE
 graph/scalars.go       Date and DateTime scalars
 scan/scan.go           Scan orchestrator
-plugins/               Company scan plugins (plus demo plugins)
+plugins/               Company scan plugins (see above)
+cmd/plugin/            CLI to run one plugin without the database
 store/store.go         All SQL
 ```
 
@@ -99,6 +153,7 @@ go run .
 |---------|---------|
 | `DATABASE_URL` | `postgres://jobapps:jobapps@localhost:5432/jobapps?sslmode=disable` |
 | `ADDR` | `:8080` |
+| `SCAN_CONCURRENCY` | `8` |
 | `DEMO_PLUGINS` | unset (set to `true` to enable demo plugins) |
 
 Endpoints: `POST /graphql`, `POST /graphql/stream`, `GET /healthz`.
@@ -109,7 +164,8 @@ Endpoints: `POST /graphql`, `POST /graphql/stream`, `GET /healthz`.
 go test ./...
 ```
 
-The scan and SSE tests need nothing else. The job tests run against a real Postgres and are skipped
+The scan, plugin and SSE tests need nothing else. Plugin tests use made-up responses, never the
+live sites. The job tests run against a real Postgres and are skipped
 unless `TEST_DATABASE_URL` is set. Each one creates a throwaway schema, applies `db/migrations` into
 it, and drops it afterwards, so existing data is never touched:
 

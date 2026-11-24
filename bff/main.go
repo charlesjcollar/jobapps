@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 
 	"jobapps/bff/graph"
 	"jobapps/bff/plugins"
+	_ "jobapps/bff/plugins/all" // registers every company plugin
 	"jobapps/bff/scan"
 	"jobapps/bff/store"
 )
@@ -35,7 +37,10 @@ func main() {
 	}
 
 	st := store.New(db)
-	scans := scan.NewManager(plugins.All(), st, scan.Options{})
+	concurrency, _ := strconv.Atoi(os.Getenv("SCAN_CONCURRENCY"))
+	ps := plugins.All()
+	log.Printf("%d scan plugins registered", len(ps))
+	scans := scan.NewManager(ps, st, scan.Options{Concurrency: concurrency})
 	schema, err := graph.NewSchema(st, scans)
 	if err != nil {
 		log.Fatalf("parsing schema: %v", err)
