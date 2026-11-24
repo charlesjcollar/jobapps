@@ -100,8 +100,9 @@ afterwards, run `go run ./plugins/internal/gen` first; until then the build fail
 Netflix's careers site is on Eightfold. The plugin searches for "Software Engineer", applies the
 title, level, country and work-arrangement (no hybrid or on-site) checks to the search results, and then fetches the full posting
 only for the jobs that pass, to check years of experience and read the salary range. The site
-rate-limits after a couple of quick requests, so the plugin waits 3 seconds between requests, backs
-off for 20 seconds or more on a 429, and allows itself 15 minutes.
+rate-limits its search API at around 6 requests a minute (it sends no rate-limit headers), so the
+plugin waits 12 seconds between search pages and 3 seconds between posting fetches, backs off for
+20 seconds or more on a 429, and allows itself 15 minutes. A scan takes about 4 minutes.
 
 ### Airbnb
 

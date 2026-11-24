@@ -71,12 +71,16 @@ const (
 
 func init() {
 	w := web.New()
-	// The site rate-limits after a couple of quick requests, so go slowly and
-	// back off for a while when it pushes back.
+	// The site sends no rate-limit headers. Its search API answers 429 at
+	// around 6-7 requests a minute (3s and 8s spacing both hit it), while
+	// fetching single postings at 3s has been fine. So page through search
+	// slowly, and back off for a while if the site still pushes back.
 	w.MinInterval = 3 * time.Second
 	w.BaseBackoff = 20 * time.Second
 	w.MaxRetries = 5
-	plugins.Register("netflix", New(baseURL, w, Criteria))
+	p := New(baseURL, w, Criteria)
+	p.client.SearchInterval = 12 * time.Second
+	plugins.Register("netflix", p)
 }
 
 // Plugin scans Netflix postings.

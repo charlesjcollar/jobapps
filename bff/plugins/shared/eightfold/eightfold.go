@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"jobapps/bff/plugins/shared/web"
 	"jobapps/bff/scan"
@@ -25,6 +26,10 @@ type Client struct {
 	// Domain is the company domain the API expects, e.g. netflix.com
 	Domain string
 	Web    *web.Client
+	// SearchInterval is an extra wait between search pages, for sites whose
+	// search API is rate-limited harder than the rest. Zero means only Web's
+	// own pacing applies.
+	SearchInterval time.Duration
 }
 
 // Position is one posting as the API returns it. Only the fields plugins use
@@ -78,6 +83,13 @@ func (c *Client) Search(ctx context.Context, query string) ([]Position, error) {
 	seen := map[int64]bool{}
 
 	for page := 0; page < maxPages; page++ {
+		if page > 0 && c.SearchInterval > 0 {
+			select {
+			case <-ctx.Done():
+				return all, fmt.Errorf("eightfold search page %d: %w", page+1, ctx.Err())
+			case <-time.After(c.SearchInterval):
+			}
+		}
 		q := url.Values{
 			"domain":  {c.Domain},
 			"query":   {query},
