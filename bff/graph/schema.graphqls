@@ -171,6 +171,8 @@ type PluginRun {
   jobsFound: Int!
   "Postings that weren't already saved."
   jobsAdded: Int!
+  "Saved postings marked EXPIRED because the company no longer lists them."
+  jobsExpired: Int!
   "What went wrong, when status is FAILED."
   error: String
 }

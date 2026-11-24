@@ -15,6 +15,7 @@ import (
 
 	"jobapps/bff/plugins/shared/eightfold"
 	"jobapps/bff/plugins/shared/web"
+	"jobapps/bff/scan"
 	"jobapps/bff/store"
 )
 
@@ -92,7 +93,9 @@ func TestCheckDetails(t *testing.T) {
 
 // fakeSite serves testdata/search.json (paged like the real API) and
 // testdata/position_<id>.json. failIDs return 500 for those positions.
-func fakeSite(t *testing.T, failIDs map[int64]bool) (*httptest.Server, *atomic.Int32) {
+// fakeSite serves testdata. Detail requests for failIDs, and search pages
+// starting at or after failSearchFrom (if > 0), answer 500.
+func fakeSite(t *testing.T, failIDs map[int64]bool, failSearchFrom int) (*httptest.Server, *atomic.Int32) {
 	t.Helper()
 	raw, err := os.ReadFile("testdata/search.json")
 	if err != nil {
@@ -111,6 +114,10 @@ func fakeSite(t *testing.T, failIDs map[int64]bool) (*httptest.Server, *atomic.I
 		}
 		if r.URL.Path == "/api/apply/v2/jobs" {
 			start, _ := strconv.Atoi(r.URL.Query().Get("start"))
+			if failSearchFrom > 0 && start >= failSearchFrom {
+				http.Error(w, "boom", 500)
+				return
+			}
 			end := min(start+eightfold.PageSize, len(all))
 			page := all[min(start, len(all)):end]
 			json.NewEncoder(w).Encode(map[string]any{"count": len(all), "positions": page})
@@ -142,7 +149,7 @@ func fastClient() *web.Client {
 }
 
 func TestScan(t *testing.T) {
-	srv, requests := fakeSite(t, nil)
+	srv, requests := fakeSite(t, nil, 0)
 	jobs, err := New(srv.URL, fastClient(), Criteria).Scan(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -188,7 +195,7 @@ func TestScan(t *testing.T) {
 }
 
 func TestScanPartialFailure(t *testing.T) {
-	srv, _ := fakeSite(t, map[int64]bool{1002: true})
+	srv, _ := fakeSite(t, map[int64]bool{1002: true}, 0)
 	jobs, err := New(srv.URL, fastClient(), Criteria).Scan(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "1 of 7 postings couldn't be checked") || !strings.Contains(err.Error(), "500") {
 		t.Errorf("err = %v", err)
@@ -222,4 +229,61 @@ func deref(s *string) string {
 		return "<nil>"
 	}
 	return *s
+}
+
+// recordingExpirer returns fixed saved jobs and records what gets expired.
+type recordingExpirer struct {
+	saved   []store.Job
+	company string
+	expired []int64
+}
+
+func (e *recordingExpirer) CompanyJobs(_ context.Context, company string, _ []string) ([]store.Job, error) {
+	e.company = company
+	return e.saved, nil
+}
+
+func (e *recordingExpirer) MarkExpired(_ context.Context, ids []int64, _ []string) ([]store.Job, error) {
+	e.expired = append(e.expired, ids...)
+	var out []store.Job
+	for _, j := range e.saved {
+		for _, id := range ids {
+			if j.ID == id {
+				out = append(out, j)
+			}
+		}
+	}
+	return out, nil
+}
+
+func TestScanExpiresMissingPostings(t *testing.T) {
+	srv, _ := fakeSite(t, nil, 0)
+	e := &recordingExpirer{saved: []store.Job{
+		{ID: 1, PostingID: "JR1001", Status: "NEW"},           // listed and kept
+		{ID: 2, PostingID: "JR1004", Status: "INTERESTED"},    // listed but filtered out: still open
+		{ID: 3, PostingID: "JR9999", Status: "USER_REJECTED"}, // gone
+	}}
+	ctx := scan.WithExpirer(context.Background(), e)
+	if _, err := New(srv.URL, fastClient(), Criteria).Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if e.company != "Netflix" {
+		t.Errorf("checked company %q, want Netflix", e.company)
+	}
+	if len(e.expired) != 1 || e.expired[0] != 3 {
+		t.Errorf("expired %v, want [3]", e.expired)
+	}
+}
+
+func TestScanSkipsExpirationWhenSearchIncomplete(t *testing.T) {
+	srv, _ := fakeSite(t, nil, eightfold.PageSize) // second page fails
+	e := &recordingExpirer{saved: []store.Job{{ID: 3, PostingID: "JR9999", Status: "NEW"}}}
+	ctx := scan.WithExpirer(context.Background(), e)
+	_, err := New(srv.URL, fastClient(), Criteria).Scan(ctx)
+	if err == nil || !strings.Contains(err.Error(), "search stopped early") {
+		t.Errorf("err = %v", err)
+	}
+	if e.company != "" || len(e.expired) != 0 {
+		t.Errorf("expiration ran on an incomplete search: company=%q expired=%v", e.company, e.expired)
+	}
 }

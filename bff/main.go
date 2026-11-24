@@ -40,7 +40,7 @@ func main() {
 	concurrency, _ := strconv.Atoi(os.Getenv("SCAN_CONCURRENCY"))
 	ps := plugins.All()
 	log.Printf("%d scan plugins registered", len(ps))
-	scans := scan.NewManager(ps, st, scan.Options{Concurrency: concurrency})
+	scans := scan.NewManager(ps, st, scan.Options{Concurrency: concurrency, Expirer: st})
 	schema, err := graph.NewSchema(st, scans)
 	if err != nil {
 		log.Fatalf("parsing schema: %v", err)

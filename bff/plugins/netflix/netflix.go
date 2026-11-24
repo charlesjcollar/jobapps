@@ -106,6 +106,19 @@ func (p *Plugin) Scan(ctx context.Context) ([]store.NewJob, error) {
 		return nil, searchErr
 	}
 
+	// Saved postings missing from the full (unfiltered) search results have
+	// come down. Only trust the results if the search finished.
+	var expireErr error
+	if searchErr == nil {
+		openIDs := make([]string, len(positions))
+		for i, pos := range positions {
+			openIDs[i] = pos.PostingID()
+		}
+		_, expireErr = scan.ExpireMissing(ctx, companyName, openIDs)
+	} else {
+		log.Warn("skipping expiration check: search didn't finish")
+	}
+
 	// First pass on search results: no extra requests needed.
 	var candidates []eightfold.Position
 	for _, pos := range positions {
@@ -143,9 +156,9 @@ func (p *Plugin) Scan(ctx context.Context) ([]store.NewJob, error) {
 		log.Debug("kept", "title", c.Name, "location", c.Location)
 	}
 
-	var err error
+	err := expireErr
 	if searchErr != nil {
-		err = fmt.Errorf("search stopped early, so some postings weren't checked: %w", searchErr)
+		err = errors.Join(err, fmt.Errorf("search stopped early, so some postings weren't checked: %w", searchErr))
 	}
 	if len(detailErrs) > 0 {
 		err = errors.Join(err, fmt.Errorf("%d of %d postings couldn't be checked: %w", len(detailErrs), len(candidates), detailErrs[0]))

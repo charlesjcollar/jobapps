@@ -17,6 +17,7 @@ export default function ScanModal({ scan, onClose }: Props) {
   const done = plugins.filter((p) => p.status === "SUCCEEDED" || p.status === "FAILED").length;
   const failed = plugins.filter((p) => p.status === "FAILED").length;
   const added = plugins.reduce((n, p) => n + p.jobsAdded, 0);
+  const expired = plugins.reduce((n, p) => n + p.jobsExpired, 0);
   const running = !scan || scan.running;
 
   return (
@@ -52,6 +53,7 @@ export default function ScanModal({ scan, onClose }: Props) {
           {scan && !running && plugins.length > 0 && (
             <span>
               {added === 0 ? "No new jobs" : `${added} new job${added === 1 ? "" : "s"} added`}
+              {expired > 0 && ` · ${expired} expired`}
             </span>
           )}
           <button className="button" onClick={onClose}>
@@ -78,7 +80,8 @@ function PluginRow({ run }: { run: PluginRun }) {
         {run.status === "RUNNING" && <span className="muted">Scanning…</span>}
         {run.status === "SUCCEEDED" && (
           <span className="muted">
-            <strong className={run.jobsAdded > 0 ? "ok" : undefined}>{run.jobsAdded} new</strong> · {run.jobsFound} found
+            <strong className={run.jobsAdded > 0 ? "ok" : undefined}>{run.jobsAdded} new</strong>
+            {run.jobsExpired > 0 && <> · {run.jobsExpired} expired</>} · {run.jobsFound} found
           </span>
         )}
         {run.status === "FAILED" && <span className="error">Failed</span>}

@@ -54,6 +54,10 @@ See `README.md` and each folder's `README.md` for details.
 - Code shared by companies on the same job-board system goes in `bff/plugins/shared/<system>/`.
 - All HTTP goes through `plugins/shared/web` (per-host pacing, retries, 429 backoff). Respect sites'
   rate limits: never work around them (e.g. by mimicking browser sessions).
+- Every plugin calls `scan.ExpireMissing` right after fetching the site's list of open postings, with
+  the IDs of every listed posting (before filters), and only when the list is complete. It marks
+  saved New/Interested/Not pursuing jobs that the company no longer lists as Expired. Plugins run
+  it themselves; the orchestrator only supplies the database through `ctx`.
 - Plugins fail cleanly: return partial results with a descriptive error (URL, status, what step),
   log rejections at Debug with the reason, and never panic on unexpected responses.
 - Tests use `httptest` with made-up fixtures in `testdata/`, never live sites or real postings.

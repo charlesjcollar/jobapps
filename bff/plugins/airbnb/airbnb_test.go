@@ -11,6 +11,8 @@ import (
 
 	"jobapps/bff/plugins/shared/greenhouse"
 	"jobapps/bff/plugins/shared/web"
+	"jobapps/bff/scan"
+	"jobapps/bff/store"
 )
 
 func job(title, location, workplace string, offices ...string) greenhouse.Job {
@@ -182,5 +184,64 @@ func TestEmptyBoard(t *testing.T) {
 	jobs, err := New(srv.URL, fastWeb(), Criteria).Scan(context.Background())
 	if err != nil || len(jobs) != 0 {
 		t.Fatalf("jobs=%d err=%v, want 0 and nil", len(jobs), err)
+	}
+}
+
+// recordingExpirer returns fixed saved jobs and records what gets expired.
+type recordingExpirer struct {
+	saved   []store.Job
+	company string
+	expired []int64
+}
+
+func (e *recordingExpirer) CompanyJobs(_ context.Context, company string, _ []string) ([]store.Job, error) {
+	e.company = company
+	return e.saved, nil
+}
+
+func (e *recordingExpirer) MarkExpired(_ context.Context, ids []int64, _ []string) ([]store.Job, error) {
+	e.expired = append(e.expired, ids...)
+	return make([]store.Job, len(ids)), nil
+}
+
+func TestScanExpiresMissingPostings(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/jobs.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(fixture) }))
+	defer srv.Close()
+
+	e := &recordingExpirer{saved: []store.Job{
+		{ID: 1, PostingID: "9000001", Status: "NEW"},           // listed and kept
+		{ID: 2, PostingID: "9000003", Status: "INTERESTED"},    // listed but filtered out (hybrid): still open
+		{ID: 3, PostingID: "8000000", Status: "USER_REJECTED"}, // gone
+	}}
+	jobs, err := New(srv.URL, fastWeb(), Criteria).Scan(scan.WithExpirer(context.Background(), e))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 2 {
+		t.Errorf("kept %d, want 2", len(jobs))
+	}
+	if e.company != "Airbnb" {
+		t.Errorf("checked company %q, want Airbnb", e.company)
+	}
+	if len(e.expired) != 1 || e.expired[0] != 3 {
+		t.Errorf("expired %v, want [3]", e.expired)
+	}
+}
+
+func TestScanSkipsExpirationOnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "boom", 500)
+	}))
+	defer srv.Close()
+	e := &recordingExpirer{saved: []store.Job{{ID: 3, PostingID: "8000000", Status: "NEW"}}}
+	if _, err := New(srv.URL, fastWeb(), Criteria).Scan(scan.WithExpirer(context.Background(), e)); err == nil {
+		t.Fatal("want an error")
+	}
+	if e.company != "" || len(e.expired) != 0 {
+		t.Errorf("expiration ran after a failed fetch: company=%q expired=%v", e.company, e.expired)
 	}
 }

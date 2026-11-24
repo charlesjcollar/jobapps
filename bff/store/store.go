@@ -309,6 +309,50 @@ func (s *Store) InsertNew(ctx context.Context, jobs []NewJob) ([]Job, error) {
 	return inserted, tx.Commit()
 }
 
+// CompanyJobs returns the company's saved jobs whose status is one of statuses.
+func (s *Store) CompanyJobs(ctx context.Context, company string, statuses []string) ([]Job, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+jobColumns+` FROM jobs
+		WHERE company_name = $1 AND status = ANY($2) ORDER BY id`, company, pq.Array(statuses))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	jobs := []Job{}
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, j)
+	}
+	return jobs, rows.Err()
+}
+
+// MarkExpired sets the given jobs to EXPIRED, but only those whose status is
+// still one of onlyIf, so a status changed in the meantime is left alone. It
+// returns the jobs it changed.
+func (s *Store) MarkExpired(ctx context.Context, ids []int64, onlyIf []string) ([]Job, error) {
+	if len(ids) == 0 {
+		return []Job{}, nil
+	}
+	rows, err := s.db.QueryContext(ctx, `UPDATE jobs SET status = 'EXPIRED'
+		WHERE id = ANY($1) AND status = ANY($2)
+		RETURNING `+jobColumns, pq.Array(ids), pq.Array(onlyIf))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	jobs := []Job{}
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, j)
+	}
+	return jobs, rows.Err()
+}
+
 // formatDate sends dates as YYYY-MM-DD strings so time zones can't shift them.
 func formatDate(t *time.Time) *string {
 	if t == nil {

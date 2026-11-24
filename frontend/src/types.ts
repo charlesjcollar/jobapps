@@ -71,6 +71,7 @@ export interface PluginRun {
   finishedAt: string | null;
   jobsFound: number;
   jobsAdded: number;
+  jobsExpired: number;
   error: string | null;
 }
 

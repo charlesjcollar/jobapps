@@ -48,7 +48,7 @@ export async function updateJob(id: string, input: JobUpdate): Promise<Job> {
 
 const SCAN_FIELDS = `
   id startedAt finishedAt running
-  plugins { name status startedAt finishedAt jobsFound jobsAdded error }
+  plugins { name status startedAt finishedAt jobsFound jobsAdded jobsExpired error }
 `;
 
 /** The scan in progress, or null. */

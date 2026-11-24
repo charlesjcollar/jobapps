@@ -18,13 +18,14 @@ type scanResult struct {
 }
 
 type pluginRun struct {
-	Name       string
-	Status     string
-	StartedAt  *DateTime
-	FinishedAt *DateTime
-	JobsFound  int32
-	JobsAdded  int32
-	Error      *string
+	Name        string
+	Status      string
+	StartedAt   *DateTime
+	FinishedAt  *DateTime
+	JobsFound   int32
+	JobsAdded   int32
+	JobsExpired int32
+	Error       *string
 }
 
 func toScan(s scan.Snapshot) *scanResult {
@@ -37,12 +38,13 @@ func toScan(s scan.Snapshot) *scanResult {
 	}
 	for i, r := range s.Runs {
 		pr := &pluginRun{
-			Name:       r.Name,
-			Status:     string(r.Status),
-			StartedAt:  optTime(r.StartedAt),
-			FinishedAt: optTime(r.FinishedAt),
-			JobsFound:  int32(r.JobsFound),
-			JobsAdded:  int32(r.JobsAdded),
+			Name:        r.Name,
+			Status:      string(r.Status),
+			StartedAt:   optTime(r.StartedAt),
+			FinishedAt:  optTime(r.FinishedAt),
+			JobsFound:   int32(r.JobsFound),
+			JobsAdded:   int32(r.JobsAdded),
+			JobsExpired: int32(r.JobsExpired),
 		}
 		if r.Error != "" {
 			pr.Error = &r.Error

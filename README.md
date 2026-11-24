@@ -46,6 +46,8 @@ already saved are skipped, so a rescan never overwrites your edits.
 - **Polite and fault-tolerant.** Plugins space out their requests, back off when a site
   rate-limits, and fail cleanly. One broken plugin doesn't stop the others, and its error shows up
   in the UI.
+- **Auto-expiration.** After fetching a company's open postings, each plugin marks saved jobs that
+  are no longer listed as Expired, if they're still New, Interested or Not pursuing.
 - **Testable on their own.** `go run ./cmd/plugin -v <company>` (from `bff/`) runs one plugin
   against the live site and prints what it keeps and why it rejected the rest, without touching the
   database.

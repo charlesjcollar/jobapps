@@ -29,7 +29,9 @@ type Plugin interface {
 	//
 	// On failure, Scan may return the postings it got before the error along
 	// with the error: those are still saved, and the run is marked failed.
-	// Use Logger(ctx) for logging.
+	// Use Logger(ctx) for logging. After fetching the site's list of open
+	// postings, call ExpireMissing so saved postings that came down are
+	// marked expired.
 	Scan(ctx context.Context) ([]store.NewJob, error)
 }
 
@@ -70,13 +72,14 @@ const (
 
 // Run is one plugin's progress within a scan.
 type Run struct {
-	Name       string
-	Status     RunStatus
-	StartedAt  *time.Time
-	FinishedAt *time.Time
-	JobsFound  int // postings the plugin returned
-	JobsAdded  int // postings that weren't already saved
-	Error      string
+	Name        string
+	Status      RunStatus
+	StartedAt   *time.Time
+	FinishedAt  *time.Time
+	JobsFound   int // postings the plugin returned
+	JobsAdded   int // postings that weren't already saved
+	JobsExpired int // saved postings the plugin marked EXPIRED (see ExpireMissing)
+	Error       string
 }
 
 // Snapshot is a point-in-time copy of a scan. Safe to read without locking.
@@ -95,6 +98,9 @@ type Options struct {
 	// PluginTimeout bounds each plugin's Scan call unless the plugin
 	// implements TimeoutPlugin. Default 2 minutes.
 	PluginTimeout time.Duration
+	// Expirer lets plugins mark saved postings that are no longer open as
+	// expired (see ExpireMissing). Nil disables expiration.
+	Expirer Expirer
 }
 
 // Manager starts scans and tracks the latest one. Only one scan runs at a time.
@@ -204,28 +210,39 @@ func (m *Manager) runPlugin(s *scan, i int, p Plugin) {
 	})
 
 	logger := slog.Default().With("scan", s.id, "plugin", p.Name())
-	found, added, err := m.scanAndSave(logger, p)
+	ctx := WithLogger(context.Background(), logger)
+	var counter *countingExpirer
+	if m.opts.Expirer != nil {
+		counter = &countingExpirer{Expirer: m.opts.Expirer}
+		ctx = WithExpirer(ctx, counter)
+	}
+	found, added, err := m.scanAndSave(ctx, logger, p)
+	expired := 0
+	if counter != nil {
+		expired = int(counter.n.Load())
+	}
 
 	s.update(i, func(r *Run) {
 		now := time.Now()
 		r.FinishedAt = &now
 		r.JobsFound = found
 		r.JobsAdded = added
+		r.JobsExpired = expired
 		if err != nil {
 			r.Status = Failed
 			r.Error = err.Error()
-			logger.Error("plugin failed", "err", err, "found", found, "added", added)
+			logger.Error("plugin failed", "err", err, "found", found, "added", added, "expired", expired)
 		} else {
 			r.Status = Succeeded
-			logger.Info("plugin finished", "found", found, "added", added)
+			logger.Info("plugin finished", "found", found, "added", added, "expired", expired)
 		}
 	})
 }
 
 // scanAndSave runs p and saves what it returns, including partial results
 // returned alongside an error.
-func (m *Manager) scanAndSave(logger *slog.Logger, p Plugin) (found, added int, err error) {
-	jobs, scanErr := m.callPlugin(logger, p)
+func (m *Manager) scanAndSave(ctx context.Context, logger *slog.Logger, p Plugin) (found, added int, err error) {
+	jobs, scanErr := m.callPlugin(ctx, logger, p)
 	if err := validate(jobs); err != nil {
 		return len(jobs), 0, errors.Join(scanErr, err)
 	}
@@ -242,12 +259,12 @@ func (m *Manager) scanAndSave(logger *slog.Logger, p Plugin) (found, added int, 
 
 // callPlugin runs p.Scan with a timeout, turning panics into errors. The call
 // runs in its own goroutine so the timeout holds even if the plugin ignores ctx.
-func (m *Manager) callPlugin(logger *slog.Logger, p Plugin) ([]store.NewJob, error) {
+func (m *Manager) callPlugin(ctx context.Context, logger *slog.Logger, p Plugin) ([]store.NewJob, error) {
 	limit := m.opts.PluginTimeout
 	if tp, ok := p.(TimeoutPlugin); ok && tp.Timeout() > 0 {
 		limit = tp.Timeout()
 	}
-	ctx, cancel := context.WithTimeout(WithLogger(context.Background(), logger), limit)
+	ctx, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 
 	type result struct {

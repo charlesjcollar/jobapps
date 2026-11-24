@@ -27,6 +27,25 @@ its filters. The orchestrator ([`scan/`](scan/)):
   can return every match they see
 - runs one scan at a time: `startScan` during a scan returns the running scan
 
+### Auto-expiration
+
+Each plugin also marks saved postings that the company no longer lists as `EXPIRED`. Right after
+fetching the site's list of open postings, the plugin calls `scan.ExpireMissing(ctx, companyName,
+openPostingIDs)`, a shared helper in [`scan/expire.go`](scan/expire.go). The plugin runs it, not
+the orchestrator; the orchestrator only passes the database in through `ctx`, the same way it
+passes the logger.
+
+- Only jobs that are **New**, **Interested** or **Not pursuing** are expired. Anything I've applied
+  to (or further) keeps its status.
+- The IDs passed are **every** open posting the site listed, before filters. A saved job that now
+  fails a filter is still open, so it isn't expired.
+- It's skipped when the list is incomplete (the fetch failed or stopped early), and when the site
+  lists nothing at all, since both more likely mean the site broke.
+- Safety limit: if more than half of a company's expirable saved jobs (and more than 5) go missing
+  in one scan, nothing is expired and the run fails with an explanation. That pattern more likely
+  means the site changed how it lists or identifies postings.
+- The scan modal shows how many postings each plugin expired.
+
 Progress is delivered by the `scanUpdated(id)` subscription, which sends the whole scan state
 immediately and again whenever a plugin starts or finishes, then completes.
 
@@ -53,15 +72,19 @@ plugins/
 
 ### Running one plugin (debugging)
 
-`cmd/plugin` runs a single plugin against the live site and prints what it keeps. It doesn't touch
-the database.
+`cmd/plugin` runs a single plugin against the live site and prints what it keeps. It never writes
+to the database.
 
 ```sh
 go run ./cmd/plugin                # list plugins
 go run ./cmd/plugin netflix        # run it; print kept postings
 go run ./cmd/plugin -v netflix     # also log each rejected posting with the reason, and each request
 go run ./cmd/plugin -json netflix  # JSON output
+go run ./cmd/plugin -db netflix    # also read the database and list saved postings that would
+                                   # expire (read-only; DATABASE_URL or the local docker database)
 ```
+
+Without `-db`, the expiration check is skipped.
 
 ### Changing a plugin's filters
 
@@ -86,8 +109,12 @@ Each plugin keeps its filters in a `Criteria` value at the top of its main file 
 3. Log with `scan.Logger(ctx)`: `Debug` for each rejected posting and its reason, `Warn` for
    problems that don't stop the scan. Return errors that say what failed and where (URL, status),
    since they're shown in the UI.
-4. Write tests against an `httptest` server serving made-up responses in `testdata/`.
-5. Regenerate the import list: `go run ./plugins/internal/gen` (the Docker build does this too).
+4. Call `scan.ExpireMissing(ctx, companyName, openPostingIDs)` right after fetching the list of
+   open postings (see [Auto-expiration](#auto-expiration)). Pass every posting the site listed,
+   not just the ones that pass the filters, and build the IDs exactly as for `store.NewJob`. Skip
+   it if the list is incomplete. Return its error along with the postings.
+5. Write tests against an `httptest` server serving made-up responses in `testdata/`.
+6. Regenerate the import list: `go run ./plugins/internal/gen` (the Docker build does this too).
 
 ### Removing a plugin
 

@@ -100,6 +100,13 @@ func (p *Plugin) Scan(ctx context.Context) ([]store.NewJob, error) {
 		}
 	}
 
+	// Saved postings missing from the full (unfiltered) list have come down.
+	openIDs := make([]string, len(all))
+	for i, j := range all {
+		openIDs[i] = j.PostingID()
+	}
+	_, expireErr := scan.ExpireMissing(ctx, companyName, openIDs)
+
 	var jobs []store.NewJob
 	for _, j := range all {
 		text := j.Text()
@@ -114,7 +121,7 @@ func (p *Plugin) Scan(ctx context.Context) ([]store.NewJob, error) {
 		log.Debug("kept", "title", j.Title, "location", j.Location.Name)
 	}
 	log.Info("filtered postings", "postings", len(all), "kept", len(jobs))
-	return jobs, nil
+	return jobs, expireErr
 }
 
 func toJob(j greenhouse.Job, text string) store.NewJob {

@@ -317,3 +317,50 @@ func TestJobsListFilterSortPage(t *testing.T) {
 		t.Error("expected limit error")
 	}
 }
+
+func TestStoreExpiration(t *testing.T) {
+	_, st := newTestSchema(t)
+	ctx := context.Background()
+	inserted, err := st.InsertNew(ctx, []store.NewJob{
+		{CompanyName: "Acme", JobTitle: "A", PostingID: "1", Link: "https://example.com/1"},
+		{CompanyName: "Acme", JobTitle: "B", PostingID: "2", Link: "https://example.com/2"},
+		{CompanyName: "Acme", JobTitle: "C", PostingID: "3", Link: "https://example.com/3"},
+		{CompanyName: "Other", JobTitle: "D", PostingID: "1", Link: "https://example.com/4"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	applied := "APPLIED"
+	if _, err := st.UpdateJob(ctx, inserted[1].ID, store.Update{Status: &applied}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := st.CompanyJobs(ctx, "Acme", scan.ExpirableStatuses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].PostingID != "1" || got[1].PostingID != "3" {
+		t.Fatalf("CompanyJobs = %+v, want Acme postings 1 and 3", got)
+	}
+
+	// Job 2 is APPLIED, so it's left alone even though it's asked for.
+	expired, err := st.MarkExpired(ctx, []int64{inserted[0].ID, inserted[1].ID}, scan.ExpirableStatuses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(expired) != 1 || expired[0].ID != inserted[0].ID || expired[0].Status != "EXPIRED" {
+		t.Fatalf("MarkExpired = %+v, want only job 1, now EXPIRED", expired)
+	}
+	for i, want := range []string{"EXPIRED", "APPLIED", "NEW", "NEW"} {
+		j, err := st.Get(ctx, inserted[i].ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if j.Status != want {
+			t.Errorf("job %d status = %s, want %s", i+1, j.Status, want)
+		}
+	}
+	if none, err := st.MarkExpired(ctx, nil, scan.ExpirableStatuses); err != nil || len(none) != 0 {
+		t.Errorf("MarkExpired(nil) = %v, %v", none, err)
+	}
+}
