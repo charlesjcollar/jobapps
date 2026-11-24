@@ -50,7 +50,7 @@ already saved are skipped, so a rescan never overwrites your edits.
   against the live site and prints what it keeps and why it rejected the rest, without touching the
   database.
 
-Current plugins: Netflix.
+Current plugins: Netflix, Airbnb.
 
 > [!NOTE]
 > **The plugins are tuned to my own job history and preferences**: which companies are included,
@@ -62,8 +62,8 @@ See [`bff/README.md`](bff/README.md#plugins) for how to write, test, change, and
 
 ## Status
 
-Done: database, frontend, bff, scan orchestration, first company plugin (Netflix). Next: more
-company plugins.
+Done: database, frontend, bff, scan orchestration, company plugins (Netflix, Airbnb). Next:
+more company plugins.
 
 ## Getting started
 

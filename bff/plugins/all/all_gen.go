@@ -5,6 +5,7 @@
 package all
 
 import (
+	_ "jobapps/bff/plugins/airbnb"
 	_ "jobapps/bff/plugins/demo"
 	_ "jobapps/bff/plugins/netflix"
 )

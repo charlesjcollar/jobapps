@@ -42,6 +42,7 @@ plugins/
   shared/              code shared between companies (not plugins themselves)
     web/               polite HTTP client: per-host pacing, retries, backoff on 429
     eightfold/         client for career sites hosted on Eightfold
+    greenhouse/        client for Greenhouse job boards (one request returns every posting)
     jobtext/           HTML to text, years-of-experience and salary parsing
   netflix/             one folder per company
     netflix.go         Criteria (the filters) at the top, then the scan
@@ -101,6 +102,16 @@ title, level, country and work-arrangement (no hybrid or on-site) checks to the 
 only for the jobs that pass, to check years of experience and read the salary range. The site
 rate-limits after a couple of quick requests, so the plugin waits 3 seconds between requests, backs
 off for 20 seconds or more on a 429, and allows itself 15 minutes.
+
+### Airbnb
+
+Airbnb's careers site lists postings from Greenhouse (board `airbnb`), so the plugin makes a single
+request to the public Greenhouse Job Board API and gets every posting with its description. It
+keeps US postings whose `Workplace Type` is `Remote`, which the site labels "Live and Work
+Anywhere". A posting counts as US if its location or one of its offices says United States, USA or
+US. It then applies the title rules and the years-of-experience rule. If no posting has a
+`Workplace Type` field at all, the run fails rather than quietly keeping nothing, since that means
+Airbnb renamed the field.
 
 ## Subscriptions over SSE
 

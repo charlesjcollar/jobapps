@@ -1,0 +1,66 @@
+{
+  "jobs": [
+    {
+      "id": 9000001, "title": "Senior Software Engineer, Example Team ",
+      "absolute_url": "https://careers.airbnb.com/positions/9000001?gh_jid=9000001",
+      "location": {"name": "Remote, USA "},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Remote", "value_type": "single_select"}],
+      "offices": [{"id": 1, "name": "United States", "location": "United States"}],
+      "departments": [{"id": 1, "name": "Software Engineering"}],
+      "first_published": "2026-11-01T09:00:00-05:00", "updated_at": "2026-11-10T09:00:00-05:00",
+      "content": "&lt;p&gt;Build made-up things.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;5+ years of software engineering experience&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Pay Range&lt;/p&gt;&lt;p&gt;&lt;span&gt;$150,000&lt;/span&gt;&lt;span&gt;&amp;nbsp;—&amp;nbsp;&lt;/span&gt;&lt;span&gt;$180,000 USD&lt;/span&gt;&lt;/p&gt;"
+    },
+    {
+      "id": 9000002, "title": "Software Engineer, Sample Platform (Full Stack)",
+      "absolute_url": "https://careers.airbnb.com/positions/9000002?gh_jid=9000002",
+      "location": {"name": "San Francisco, CA"},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Remote", "value_type": "single_select"}],
+      "offices": [{"id": 2, "name": "San Francisco, United States", "location": "San Francisco, CA"}],
+      "first_published": "2026-11-05T09:00:00-05:00",
+      "content": "&lt;p&gt;No experience requirement stated.&lt;/p&gt;"
+    },
+    {
+      "id": 9000003, "title": "Senior Software Engineer, Hybrid Team",
+      "location": {"name": "United States"},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Hybrid", "value_type": "single_select"}],
+      "offices": [{"id": 1, "name": "United States", "location": "United States"}],
+      "content": ""
+    },
+    {
+      "id": 9000004, "title": "Senior Software Engineer, Overseas",
+      "location": {"name": "Brazil"},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Remote", "value_type": "single_select"}],
+      "offices": [{"id": 3, "name": "Brazil", "location": "Brazil"}],
+      "content": ""
+    },
+    {
+      "id": 9000005, "title": "Staff Software Engineer, Example",
+      "location": {"name": "United States"},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Remote", "value_type": "single_select"}],
+      "offices": [{"id": 1, "name": "United States", "location": "United States"}],
+      "content": ""
+    },
+    {
+      "id": 9000006, "title": "Senior Software Engineer, Lots Of Experience",
+      "location": {"name": "US - Remote"},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Remote", "value_type": "single_select"}],
+      "offices": [{"id": 1, "name": "United States", "location": "United States"}],
+      "content": "&lt;ul&gt;&lt;li&gt;8+ years of industry experience&lt;/li&gt;&lt;/ul&gt;"
+    },
+    {
+      "id": 9000007, "title": "Engineering Manager, Example",
+      "location": {"name": "United States"},
+      "metadata": [{"id": 1, "name": "Workplace Type", "value": "Remote", "value_type": "single_select"}],
+      "offices": [],
+      "content": ""
+    },
+    {
+      "id": 9000008, "title": "Senior Software Engineer, No Workplace Field",
+      "location": {"name": "United States"},
+      "metadata": [],
+      "offices": [],
+      "content": ""
+    }
+  ],
+  "meta": {"total": 8}
+}
