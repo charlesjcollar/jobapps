@@ -28,3 +28,4 @@ bin/
 /db/*
 !/db/migrations/
 !/db/README.md
+/Charlie Collar Resume.html
