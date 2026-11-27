@@ -62,6 +62,7 @@ plugins/
     web/               polite HTTP client: per-host pacing, retries, backoff on 429
     eightfold/         client for career sites hosted on Eightfold
     greenhouse/        client for Greenhouse job boards (one request returns every posting)
+    ashby/             client for Ashby job boards (one request, includes structured pay)
     jobtext/           HTML to text, years-of-experience and salary parsing
   netflix/             one folder per company
     netflix.go         Criteria (the filters) at the top, then the scan
@@ -155,6 +156,17 @@ location ("Remote - Americas", "Global Anywhere", "Remote - Europe, Americas"):
   dropped unless they also name an allowed region ("US or Canada").
 - Title rules are the same as the other plugins, plus Alpaca's "Full-Stack" spelling, "Product
   Engineer" titles, and excluding "Quality" (quality-engineering roles).
+
+### Monarch Money
+
+Monarch's board is on Ashby (`jobs.ashbyhq.com/monarchmoney`). One request to Ashby's public posting
+API returns every listed posting with its description and pay, so the salary comes from Ashby's
+structured compensation rather than the description text. The plugin keeps postings whose workplace
+type is Remote and whose locations include the US ("Remote (US)") or just "Remote"; "Remote
+(Canada)" and "Remote (non-US)" alone don't count. Monarch writes combined levels like
+"(Senior/Staff/Principal)" into titles; a combined level counts as its lowest, so "Software Engineer
+(Senior/Staff)" is kept and "(Staff/Principal)" isn't. Monarch's standing "Future Engineering
+Opportunities" posting is kept as an allowed title.
 
 ## Subscriptions over SSE
 

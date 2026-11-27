@@ -1,0 +1,47 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001", "title": "Future Engineering Opportunities",
+      "department": "Engineering", "location": "Remote", "secondaryLocations": [],
+      "isListed": true, "isRemote": true, "workplaceType": "Remote",
+      "publishedAt": "2025-05-22T15:42:52.005+00:00",
+      "jobUrl": "https://jobs.ashbyhq.com/monarchmoney/00000000-0000-0000-0000-000000000001",
+      "descriptionPlain": "Made-up description. We look for 3+ years of experience.",
+      "compensation": {"summaryComponents": [
+        {"compensationType": "Salary", "interval": "1 YEAR", "currencyCode": "USD", "minValue": 120000, "maxValue": 230000},
+        {"compensationType": "EquityCashValue", "interval": "1 YEAR", "currencyCode": "USD", "minValue": null, "maxValue": null}
+      ]}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002", "title": " Software Engineer (Senior/Staff), Example Team",
+      "location": "Remote (US)", "secondaryLocations": [{"location": "Remote (Canada)"}],
+      "isListed": true, "isRemote": true, "workplaceType": "Remote",
+      "publishedAt": "2026-11-20T10:00:00.000+00:00",
+      "jobUrl": "https://jobs.ashbyhq.com/monarchmoney/00000000-0000-0000-0000-000000000002",
+      "descriptionHtml": "<ul><li>5+ years of professional experience</li></ul><p>$150k - $190k</p>",
+      "compensation": null
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003", "title": "Future Opportunities",
+      "location": "Remote", "isListed": true, "isRemote": true, "workplaceType": "Remote",
+      "descriptionPlain": ""
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000004", "title": "Senior Software Engineer, Canada Only",
+      "location": "Remote (Canada)", "secondaryLocations": [{"location": "Remote (non-US)"}],
+      "isListed": true, "isRemote": true, "workplaceType": "Remote",
+      "descriptionPlain": ""
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000005", "title": "Senior Software Engineer, Hidden",
+      "location": "Remote (US)", "isListed": false, "isRemote": true, "workplaceType": "Remote",
+      "descriptionPlain": ""
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000006", "title": "Senior Software Engineer, Office",
+      "location": "New York (US)", "isListed": true, "isRemote": false, "workplaceType": "OnSite",
+      "descriptionPlain": ""
+    }
+  ]
+}
